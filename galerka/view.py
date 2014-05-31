@@ -5,32 +5,93 @@ from markupsafe import Markup
 import markdown
 import textwrap
 
-from galerka.util import asyncached
+from galerka.util import asyncached, AsyncGetter
+
+
+class Root:
+    parent = None
+    lineage = AsyncGetter([])
+
+    def __init__(self, request, root_class):
+        self.root_class = root_class
+        self.request = request
+
+    @asyncio.coroutine
+    def traverse(self, pathinfo):
+        if pathinfo[:1] != ['']:
+            raise LookupError('Attempt to traverse above app root')
+        return (yield from self.root_class(self, '').traverse(pathinfo[1:]))
 
 
 class View:
-    _galerka_view = True
+    def __init__(self, parent, url_fragment, *, request=None):
+        self.parent = parent
+        self.request = parent.request
+        if getattr(self, 'url_fragment', None) is None:
+            self.url_fragment = AsyncGetter(url_fragment)
+
+    @classmethod
+    def _get_root(cls, request):
+        return Root(request, cls)
+
+    @asyncio.coroutine
+    def traverse(self, pathinfo):
+        if not pathinfo:
+            return self
+        url_fragment = pathinfo[0]
+        if url_fragment == '..':
+            return self.parent
+        elif url_fragment == '.':
+            return self
+        elif url_fragment in getattr(self, 'child_classes', {}):
+            child = self.child_classes[url_fragment](self, url_fragment)
+        else:
+            child = (yield from self.get_child(url_fragment))
+        return (yield from child.traverse(pathinfo[1:]))
+
+    @asyncio.coroutine
+    def get_child(self, url_fragment):
+        raise LookupError(url_fragment)
+
+    @asyncached
+    def path(self):
+        result = yield from [(yield from parent.url_fragment)
+                             for parent in (yield from self.lineage)]
+        path = '/'.join(result)
+        if not path:
+            return '/'
+        else:
+            return path
 
     @asyncached
     def url(self):
-        return '/'  # TODO
-
-    def __init__(self, request):
-        self.request = request
+        return (yield from self.path)
 
     @asyncached
     def lineage(self):
-        result = []
-        page = self
-        while page:
-            result.append(page)
-            page = (yield from page.parent)
-        return result
+        return (yield from self.parent.lineage) + [self]
 
+    @asyncached
+    def root(self):
+        return (yield from self.lineage)[-1].parent
+
+    @classmethod
+    def child(cls, name):
+        def decorator(child):
+            try:
+                child_classes = cls.child_classes
+            except AttributeError:
+                child_classes = cls.child_classes = {}
+            child_classes[name] = child
+            return child
+        return decorator
+
+
+class GalerkaView(View):
     @asyncached
     def rendered_hierarchy(self):
         result = []
-        for page in reversed((yield from self.lineage)):
+        for page in (yield from self.lineage):
             result.append(Markup('<li><a href="{}">{}</a></li>').format(
                 (yield from page.url),
                 (yield from page.title),
@@ -43,12 +104,13 @@ class View:
         result = yield from template.render_async(
             this=self,
             request=self.request,
-            static_url=lambda a: '/static/' + a,
+            static_url=self.request.environ['galerka.static-url'],
+            root=(yield from self.root),
         )
         return Response(result, mimetype=mimetype)
 
 
-class TitlePage(View):
+class TitlePage(GalerkaView):
     @asyncached
     def title(self):
         return self.request.environ['galerka.site-title']
@@ -66,7 +128,8 @@ class TitlePage(View):
         return 'Hello World'
 
 
-class TestPage(View):
+@TitlePage.child('test')
+class TestPage(GalerkaView):
     @asyncached
     def url(self):
         return '/test'
