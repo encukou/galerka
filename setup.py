@@ -5,6 +5,7 @@ from setuptools import setup, find_packages
 
 requires = [
     'flask-async',
+    'docopt',
 ]
 
 if sys.version_info[:3] < (3, 3):
