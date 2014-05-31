@@ -24,7 +24,8 @@ def galerka_app_context(app, *, debug=False):
         environ_values = {
             'galerka.debug': debug,
             'galerka.tempdir': tempdir,
-            'galerka.mako': mako
+            'galerka.mako': mako,
+            'galerka.site-title': 'Galerie',
         }
 
         def middleware(environ, start_response):

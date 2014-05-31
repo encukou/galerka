@@ -7,15 +7,7 @@ from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.utils import call_maybe_yield
 
-
-class View:
-    def __init__(self, request):
-        self.request = request
-
-
-def title_page(request):
-    template = request.environ['galerka.mako'].get_template('base.mako')
-    return Response(template.render(), mimetype='text/html')
+from galerka.view import TitlePage
 
 
 @asyncio.coroutine
@@ -33,7 +25,7 @@ def error_404(request):
 
 url_map = Map(
     [
-        Rule('/', endpoint=title_page, methods=['GET']),
+        Rule('/', endpoint=TitlePage, methods=['GET']),
         Rule('/test', endpoint=test_page, methods=['GET']),
     ],
     redirect_defaults=True,
@@ -58,5 +50,9 @@ def application(environ, start_response):
         endpoint = None
     request = Request(environ)
     if endpoint:
-        response = yield from call_maybe_yield(endpoint, request, **values)
+        if getattr(endpoint, '_galerka_view', False):
+            view = endpoint(request, **values)
+            response = yield from view.render()
+        else:
+            response = yield from call_maybe_yield(endpoint, request, **values)
     return response(environ, start_response)
