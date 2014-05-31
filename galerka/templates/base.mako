@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-  <title><!-- TODO title --></title>
+  <title>${(yield from this.title) or ''}${' - ' if (yield from this.title) else ''}${request.environ['galerka.site-title']}</title>
   <link rel="shortcut icon" href="$ {static_url('favicon.png')}" />
   <link rel="stylesheet" href="$ {static_url('css')}" type="text/css" media="screen" charset="utf-8" />
 </head>
@@ -16,7 +16,13 @@
                 <!-- TODO hierarchy -->
             </ul>
         </nav>
-        <h1><!-- TODO title --><h1>
+        <h1>
+            % if hasattr(this, 'page_title'):
+                ${(yield from this.page_title)}
+            % else:
+                ${(yield from this.title) or request.environ['galerka.site-title']}
+            % endif
+        <h1>
         <!-- TODO body -->
     </section>
     <hr>

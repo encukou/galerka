@@ -4,6 +4,7 @@ from werkzeug.wrappers import Response
 
 from galerka.util import asyncached
 
+
 class View:
     _galerka_view = True
 
