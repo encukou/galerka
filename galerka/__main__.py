@@ -12,6 +12,7 @@ Options:
 """
 
 import sys
+from asyncio import coroutine
 
 from werkzeug.serving import run_simple
 import docopt
@@ -19,13 +20,25 @@ import docopt
 from galerka.app import application
 
 
+def set_debug(app):
+    def middleware(environ, start_response):
+        environ['galerka.debug'] = True
+        return app(environ, start_response)
+    return middleware
+
+
 def main(options):
     debug = options['--debug']
+
+    app = application
+
+    if debug:
+        app = set_debug(app)
 
     run_simple(
         hostname=options['--hostname'],
         port=int(options['--port']),
-        application=application,
+        application=app,
         use_reloader=debug,
         use_debugger=debug,
     )
