@@ -7,6 +7,7 @@ requires = [
     'flask-async',
     'docopt',
     'pprintpp',
+    'mako',
 ]
 
 if sys.version_info[:3] < (3, 3):

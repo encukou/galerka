@@ -1,4 +1,5 @@
 import asyncio
+from inspect import isclass
 
 import pprintpp
 from werkzeug.wrappers import Request, Response
@@ -7,8 +8,14 @@ from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.utils import call_maybe_yield
 
 
+class View:
+    def __init__(self, request):
+        self.request = request
+
+
 def title_page(request):
-    return Response('Hello World!')
+    template = request.environ['galerka.mako'].get_template('base.mako')
+    return Response(template.render(), mimetype='text/html')
 
 
 @asyncio.coroutine
@@ -35,7 +42,7 @@ url_map = Map(
 
 @asyncio.coroutine
 def application(environ, start_response):
-    if environ.get('galerka.debug'):
+    if environ['galerka.debug']:
         print('Handling request')
         pprintpp.pprint(environ)
     adapter = url_map.bind_to_environ(environ)
