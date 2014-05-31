@@ -1,0 +1,24 @@
+$mid_background: #b5a072;
+$dark_background: #a08c61;
+$slightly_light_background: #c6b083;
+$light_background: #dac397;
+$text_on_mid: #130e04;
+
+$dark_foreground: #44381f;
+$dark_secondary_color: #3e4929;
+$link_hover_color: white;
+$disabled_color: $text_on_mid.mix(50%, $dark_background);
+
+$flash_color: #ffffff;
+$flash_border: #d37a13;
+
+$relayout_duration: 0.5s;
+
+$sans: 'Ubuntu', sans-serif;
+$serif: 'Gentium Book Basic', serif;
+
+@import reset.css;
+@import generic.scss;
+@import layout.scss;
+@import content.scss;
+@import chrome.scss;

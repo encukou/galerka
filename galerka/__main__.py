@@ -31,6 +31,7 @@ def main(options):
             application=app,
             use_reloader=debug,
             use_debugger=debug,
+            extra_files=app.extra_files,
         )
 
 main(docopt.docopt(__doc__))

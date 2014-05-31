@@ -8,6 +8,8 @@ requires = [
     'docopt',
     'pprintpp',
     'asyncmako',
+    'pyscss',
+    'markdown',
 ]
 
 if sys.version_info[:3] < (3, 3):

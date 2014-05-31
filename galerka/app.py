@@ -7,7 +7,7 @@ from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.utils import call_maybe_yield
 
-from galerka.view import TitlePage
+from galerka.view import TitlePage, TestPage
 
 
 @asyncio.coroutine
@@ -26,7 +26,7 @@ def error_404(request):
 url_map = Map(
     [
         Rule('/', endpoint=TitlePage, methods=['GET']),
-        Rule('/test', endpoint=test_page, methods=['GET']),
+        Rule('/test', endpoint=TestPage, methods=['GET']),
     ],
     redirect_defaults=True,
 )
@@ -52,7 +52,7 @@ def application(environ, start_response):
     if endpoint:
         if getattr(endpoint, '_galerka_view', False):
             view = endpoint(request, **values)
-            response = yield from view.render()
+            response = yield from view.rendered_page
         else:
             response = yield from call_maybe_yield(endpoint, request, **values)
     return response(environ, start_response)

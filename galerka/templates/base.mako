@@ -2,18 +2,26 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-  <title>${(yield from this.title) or ''}${' - ' if (yield from this.title) else ''}${request.environ['galerka.site-title']}</title>
-  <link rel="shortcut icon" href="$ {static_url('favicon.png')}" />
-  <link rel="stylesheet" href="$ {static_url('css')}" type="text/css" media="screen" charset="utf-8" />
+  <title>
+    % if (yield from this.title) != request.environ['galerka.site-title']:
+        ${(yield from this.title)} -
+    % endif
+    ${request.environ['galerka.site-title']}
+  </title>
+  <link rel="shortcut icon" href="${static_url('favicon.png')}" />
+  <link rel="stylesheet" href="${static_url('style.css')}"
+        type="text/css" media="screen" charset="utf-8" />
 </head>
 <body class="galerka no-js">
     <header>
-        <div class="title" title="Galerie"><a href="${''}">&nbsp;</a></div>
+        <div id="site-title" title="Galerie">
+            <a href="/">&nbsp;</a>
+        </div>
     </header>
     <section id="content">
-        <nav class="hierarchy">
+        <nav id="hierarchy">
             <ul>
-                <!-- TODO hierarchy -->
+                ${(yield from this.rendered_hierarchy)}
             </ul>
         </nav>
         <h1>
@@ -22,18 +30,24 @@
             % else:
                 ${(yield from this.title) or request.environ['galerka.site-title']}
             % endif
-        <h1>
-        <!-- TODO body -->
+        </h1>
+        ${(yield from this.rendered_contents)}
     </section>
     <hr>
     <footer>
         <section id="usernav">
-            <!-- TODO login -->
+            <details open id="login">
+                <h2>Login</h2>
+                <!-- TODO login -->
+            </details>
             <!-- TODO mgmt -->
             <!-- TODO shoutbox -->
         </section>
         <section id="sitenav">
-            <!-- TODO search -->
+            <details open id="search">
+                <h2>Hledání</h2>
+                <!-- TODO search -->
+            </details>
             <!-- TODO userlist -->
             <!-- TODO gallery -->
             <!-- TODO count -->
