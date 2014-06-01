@@ -10,6 +10,15 @@ import markupsafe
 from galerka.app import application
 from galerka.static import create_static_dir
 from galerka.util import make_tempdir
+from galerka.view import View
+
+from galerka.views.index import TitlePage
+
+
+def list_subclasses(parent):
+    for cls in parent.__subclasses__():
+        yield cls
+        yield from list_subclasses(cls)
 
 
 @contextlib.contextmanager
@@ -32,11 +41,19 @@ def galerka_app_context(app, *, debug=False):
         create_static_dir(root / 'resources', static_dir, debug=debug)
         app = SharedDataMiddleware(app, {'/static': str(static_dir)})
 
+        print('Loading view modules:')
+        for module in TitlePage._load_all_views():
+            print('    %s' % module.__name__)
+        print('Views loaded:')
+        for cls in list_subclasses(View):
+            print('    %s:%s' % (cls.__module__, cls.__qualname__))
+
         environ_values = {
             'galerka.debug': debug,
             'galerka.tempdir': tempdir,
             'galerka.mako': mako,
             'galerka.site-title': 'Galerie',
+            'galerka.get_root': TitlePage._get_root,
         }
 
         def application(environ, start_response):

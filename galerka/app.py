@@ -8,10 +8,6 @@ from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.utils import redirect
 
-from galerka.view import TitlePage
-
-root_view_class = TitlePage
-
 
 @asyncio.coroutine
 def error_404(request):
@@ -27,7 +23,7 @@ def application(environ, start_response):
         print('Handling request')
         pprintpp.pprint(environ)
     request = Request(environ)
-    root = root_view_class._get_root(request)
+    root = environ['galerka.get_root'](request)
     pathinfo = environ['PATH_INFO'].rstrip('/').split('/')
     try:
         view = (yield from root.traverse(pathinfo))
