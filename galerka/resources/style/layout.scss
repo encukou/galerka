@@ -1,7 +1,7 @@
 
 #links, #usernav, #sitenav {
     /* cream_dust: Made by Thomas Myrman (http://thomasmyrman.com/); colorized by ECK */
-    background-image: url('/static/background/cream_dust-slightly_light.png');
+    background-image: url('background/cream_dust-slightly_light.png');
     background-color: $slightly_light_background;
     color: $dark_foreground;
 
@@ -54,7 +54,7 @@
 #site-title {
     width: 100%;
     background-color: $mid_background;
-    background-image: url(/static/background/head.png);
+    background-image: url(background/head.png);
     background-repeat: no-repeat;
     background-position: 50% 100%;
 
@@ -223,7 +223,7 @@ footer {
             padding: 0.5ex;
 
             li:before {
-                content: url(/static/favicon.png);
+                content: url(favicon.png);
                 padding-left: 1em;
                 float: right;
             }

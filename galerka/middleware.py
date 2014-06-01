@@ -37,7 +37,6 @@ def galerka_app_context(app, *, debug=False):
             'galerka.tempdir': tempdir,
             'galerka.mako': mako,
             'galerka.site-title': 'Galerie',
-            'galerka.static-url': lambda a: '/static/' + a,
         }
 
         def application(environ, start_response):

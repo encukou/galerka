@@ -1,20 +1,24 @@
 import asyncio
 
 from werkzeug.wrappers import Response
+from werkzeug.utils import cached_property
+from werkzeug.urls import Href
 from markupsafe import Markup
 import markdown
 import textwrap
 
-from galerka.util import asyncached, AsyncGetter
+from galerka.util import asyncached
 
 
 class Root:
     parent = None
-    lineage = AsyncGetter([])
+    lineage = ()
 
     def __init__(self, request, root_class):
         self.root_class = root_class
         self.request = request
+        self.url = request.url_root
+        self.href = Href(request.url_root)
 
     @asyncio.coroutine
     def traverse(self, pathinfo):
@@ -25,10 +29,11 @@ class Root:
 
 class View:
     def __init__(self, parent, url_fragment, *, request=None):
+        print(self, parent)
         self.parent = parent
         self.request = parent.request
         if getattr(self, 'url_fragment', None) is None:
-            self.url_fragment = AsyncGetter(url_fragment)
+            self.url_fragment = url_fragment
 
     @classmethod
     def _get_root(cls, request):
@@ -53,27 +58,25 @@ class View:
     def get_child(self, url_fragment):
         raise LookupError(url_fragment)
 
-    @asyncached
+    @cached_property
     def path(self):
-        result = yield from [(yield from parent.url_fragment)
-                             for parent in (yield from self.lineage)]
-        path = '/'.join(result)
+        path = '/'.join(parent.url_fragment for parent in self.lineage)
         if not path:
             return '/'
         else:
             return path
 
-    @asyncached
-    def url(self):
-        return (yield from self.path)
-
-    @asyncached
+    @cached_property
     def lineage(self):
-        return (yield from self.parent.lineage) + [self]
+        return self.parent.lineage + (self, )
 
-    @asyncached
+    @cached_property
+    def url(self):
+        return self.root.href(self.path)
+
+    @cached_property
     def root(self):
-        return (yield from self.lineage)[-1].parent
+        return self.lineage[0].parent
 
     @classmethod
     def child(cls, name):
@@ -91,9 +94,9 @@ class GalerkaView(View):
     @asyncached
     def rendered_hierarchy(self):
         result = []
-        for page in (yield from self.lineage):
+        for page in self.lineage:
             result.append(Markup('<li><a href="{}">{}</a></li>').format(
-                (yield from page.url),
+                page.url,
                 (yield from page.title),
             ))
         return Markup('').join(result)
@@ -104,8 +107,7 @@ class GalerkaView(View):
         result = yield from template.render_async(
             this=self,
             request=self.request,
-            static_url=self.request.environ['galerka.static-url'],
-            root=(yield from self.root),
+            static_url=self.root.href.static,
         )
         return Response(result, mimetype=mimetype)
 
@@ -130,10 +132,6 @@ class TitlePage(GalerkaView):
 
 @TitlePage.child('test')
 class TestPage(GalerkaView):
-    @asyncached
-    def url(self):
-        return '/test'
-
     @asyncached
     def title(self):
         return 'Testovací  stránka'

@@ -38,10 +38,8 @@ def application(environ, start_response):
         return e
     else:
         environ['galerka.view'] = view
-        path = yield from view.path
-        if environ['PATH_INFO'] != path:
-            new_url = '%s?%s' % ((yield from view.url),
-                                 environ['QUERY_STRING'])
+        if environ['PATH_INFO'] != view.path:
+            new_url = '%s?%s' % (view.url, environ['QUERY_STRING'])
             response = redirect(new_url)
         else:
             response = yield from view.rendered_page
