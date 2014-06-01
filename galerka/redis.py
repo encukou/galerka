@@ -79,4 +79,14 @@ class RedisProxy:
         reply = conn.lpush(self.prefix + key, values)
         return (yield from reply)
 
+    def zadd(self, key, values):
+        conn = yield from self.conn
+        reply = conn.zadd(self.prefix + key, values)
+        return (yield from reply)
+
+    def zrange(self, key, start=0, stop=-1):
+        conn = yield from self.conn
+        reply = conn.zrange(self.prefix + key, start, stop)
+        return (yield from reply)
+
     # TODO: Proxy all the others

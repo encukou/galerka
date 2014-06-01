@@ -45,5 +45,8 @@ def application(environ, start_response):
             new_url = '%s?%s' % (view.url, environ['QUERY_STRING'])
             response = redirect(new_url)
         else:
-            response = yield from view.get_response(method)
+            try:
+                response = yield from view.get_response(method)
+            except HTTPException as e:
+                response = e
     return response(environ, start_response)
