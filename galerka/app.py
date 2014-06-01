@@ -40,9 +40,10 @@ def application(environ, start_response):
         return e
     else:
         environ['galerka.view'] = view
-        if environ['PATH_INFO'] != view.path:
+        method = environ['REQUEST_METHOD']
+        if environ['PATH_INFO'] != view.path and method == 'GET':
             new_url = '%s?%s' % (view.url, environ['QUERY_STRING'])
             response = redirect(new_url)
         else:
-            response = yield from view.rendered_page
+            response = yield from view.get_response(method)
     return response(environ, start_response)

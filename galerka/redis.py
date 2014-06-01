@@ -74,4 +74,9 @@ class RedisProxy:
         reply = conn.lrange(self.prefix + key, start, stop)
         return (yield from reply)
 
+    def lpush(self, key, values):
+        conn = yield from self.conn
+        reply = conn.lpush(self.prefix + key, values)
+        return (yield from reply)
+
     # TODO: Proxy all the others

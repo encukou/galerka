@@ -1,7 +1,9 @@
+import asyncio
 import markdown
 import textwrap
 import json
 
+from werkzeug.wrappers import Response
 from markupsafe import Markup
 
 from galerka.view import GalerkaView
@@ -42,3 +44,9 @@ class ShoutboxPage(GalerkaView):
     @asyncached
     def rendered_sidebar_posts(self):
         return self._render_posts(3)
+
+    @asyncio.coroutine
+    def do_post(self):
+        yield from self.request.redis.lpush('shoutbox',
+                                            [self.request.form['content']])
+        return self.request.args.get('redirect', self.root.url)

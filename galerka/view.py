@@ -5,9 +5,10 @@ import sys
 from werkzeug.wrappers import Response
 from werkzeug.utils import cached_property
 from werkzeug.urls import Href
+from werkzeug.exceptions import MethodNotAllowed
 from markupsafe import Markup
 
-from galerka.util import asyncached
+from galerka.util import asyncached, AsyncGetter
 
 
 class View:
@@ -92,6 +93,26 @@ class View:
             return child
         return decorator
 
+    @cached_property
+    def allowed_methods(self):
+        methods = ('GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'TRACE', 'OPTIONS')
+        return [m for m in methods if getattr(self, m, None)]
+
+    def get_response(self, method):
+        method = method.upper()
+        if method in self.allowed_methods:
+            return getattr(self, method)
+        else:
+            return AsyncGetter(MethodNotAllowed(self.allowed_methods))
+
+    @cached_property
+    def HEAD(self):
+        return self.GET
+
+    @asyncached
+    def OPTIONS(self):
+        return Response('', headers={'Allow': ', '.join(self.allowed_methods)})
+
     @classmethod
     def _load_all_views(cls):
         for pkg in cls.view_packages:
@@ -103,6 +124,42 @@ class View:
 
 
 class GalerkaView(View):
+    @cached_property
+    def GET(self):
+        try:
+            rendered_page = self.rendered_page
+        except AttributeError:
+            return None
+        else:
+            @asyncio.coroutine
+            def get():
+                rendered = yield from rendered_page
+                return Response(rendered, mimetype='text/html')
+            return get()
+
+    @property
+    def POST(self):
+        try:
+            do_post = self.do_post
+        except AttributeError:
+            return None
+        else:
+            @asyncio.coroutine
+            def post():
+                url = yield from do_post()
+                content = Markup('''
+                    <head>
+                        <title>OK</title>
+                    </head>
+                    <body>
+                        <h1>OK</h1>
+                        <p>→ <a href="{}">{}</a></p>
+                    </body>
+                ''').format(Markup(url), url)
+                return Response(content, 303, mimetype='text/html',
+                                headers={'Location': url})
+            return post()
+
     @asyncached
     def rendered_hierarchy(self):
         result = []
@@ -117,7 +174,7 @@ class GalerkaView(View):
         return self.request.environ['galerka.mako'].get_template(name)
 
     @asyncio.coroutine
-    def render_template(self, name, mimetype='text/html'):
+    def render_template(self, name):
         template = self.get_template(name)
         result = yield from template.render_async(
             this=self,
@@ -125,4 +182,4 @@ class GalerkaView(View):
             static_url=self.root.href.static,
             redis=self.request.redis,
         )
-        return Response(result, mimetype=mimetype)
+        return result
