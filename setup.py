@@ -10,6 +10,7 @@ requires = [
     'asyncmako',
     'pyscss',
     'markdown',
+    'asyncio-redis',
 ]
 
 if sys.version_info[:3] < (3, 3):

@@ -113,12 +113,16 @@ class GalerkaView(View):
             ))
         return Markup('').join(result)
 
+    def get_template(self, name):
+        return self.request.environ['galerka.mako'].get_template(name)
+
     @asyncio.coroutine
     def render_template(self, name, mimetype='text/html'):
-        template = self.request.environ['galerka.mako'].get_template(name)
+        template = self.get_template(name)
         result = yield from template.render_async(
             this=self,
             request=self.request,
             static_url=self.root.href.static,
+            redis=self.request.redis,
         )
         return Response(result, mimetype=mimetype)

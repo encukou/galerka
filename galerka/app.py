@@ -8,6 +8,8 @@ from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.utils import redirect
 
+from galerka.redis import RedisMixin
+
 
 @asyncio.coroutine
 def error_404(request):
@@ -17,12 +19,16 @@ def error_404(request):
                     status=404)
 
 
+class GalerkaRequest(Request, RedisMixin):
+    pass
+
+
 @asyncio.coroutine
 def application(environ, start_response):
     if environ['galerka.debug']:
         print('Handling request')
         pprintpp.pprint(environ)
-    request = Request(environ)
+    request = GalerkaRequest(environ)
     root = environ['galerka.root_class'](None, '', request=request)
     pathinfo = environ['PATH_INFO'].rstrip('/').split('/')
     try:

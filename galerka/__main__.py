@@ -5,10 +5,16 @@ Usage:
 
 Options:
   -h, --help                Show help
-  --hostname=[HOSTNAME]     Hostname to tun on [default: localhost]
-  -p, --port=[NUM]          Port to listen on [default: 4000]
+  --hostname=HOSTNAME       Hostname to run on [default: localhost]
+  -p, --port=NUM            Port to listen on [default: 4000]
   -d, --debug               Enable debugging
+  --redis-url=URL           Redis URL [default: redis://localhost:6379/#galerka]
 
+The Redis URL can be in the form:
+    redis://[db-number[:password]@]host:port[?option=value][#prefix]
+    A ':' will be appended toi the prefix if it's not already there
+    Options are:
+        poolsize: Connections to allocate [default: 20]
 """
 
 import sys
@@ -22,9 +28,17 @@ from galerka.middleware import galerka_app_context
 
 
 def main(options):
+    print(options)
+
     debug = options['--debug']
 
-    with galerka_app_context(application, debug=debug) as app:
+    context = galerka_app_context(
+        application,
+        redis_url=options['--redis-url'],
+        debug=debug,
+    )
+
+    with context as app:
         run_simple(
             hostname=options['--hostname'],
             port=int(options['--port']),

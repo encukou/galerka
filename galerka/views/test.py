@@ -15,10 +15,6 @@ class TestPage(GalerkaView):
         return 'Testovací  stránka'
 
     @asyncached
-    def parent(self):
-        return TitlePage(self.request)
-
-    @asyncached
     def rendered_page(self):
         return (yield from self.render_template('base.mako'))
 

@@ -41,7 +41,7 @@
                 <!-- TODO login -->
             </details>
             <!-- TODO mgmt -->
-            <!-- TODO shoutbox -->
+            <%include file="widgets/shoutbox.mako" />
         </section>
         <section id="sitenav">
             <details open id="search">

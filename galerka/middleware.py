@@ -11,6 +11,7 @@ from galerka.app import application
 from galerka.static import create_static_dir
 from galerka.util import make_tempdir
 from galerka.view import View
+from galerka.redis import get_redis_args
 
 from galerka.views.index import TitlePage
 
@@ -22,7 +23,7 @@ def list_subclasses(parent):
 
 
 @contextlib.contextmanager
-def galerka_app_context(app, *, debug=False):
+def galerka_app_context(app, *, redis_url=None, debug=False):
     with make_tempdir(prefix='galerka-tmp.') as tempdir:
         root = pathlib.Path(__file__).parent
         template_dir = root / 'templates'
@@ -54,6 +55,7 @@ def galerka_app_context(app, *, debug=False):
             'galerka.mako': mako,
             'galerka.site-title': 'Galerie',
             'galerka.root_class': TitlePage,
+            'galerka.redis-args': get_redis_args(redis_url),
         }
 
         def application(environ, start_response):
