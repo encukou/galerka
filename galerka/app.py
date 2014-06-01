@@ -23,7 +23,7 @@ def application(environ, start_response):
         print('Handling request')
         pprintpp.pprint(environ)
     request = Request(environ)
-    root = environ['galerka.get_root'](request)
+    root = environ['galerka.root_class'](None, '', request=request)
     pathinfo = environ['PATH_INFO'].rstrip('/').split('/')
     try:
         view = (yield from root.traverse(pathinfo))

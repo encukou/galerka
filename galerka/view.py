@@ -10,34 +10,13 @@ from markupsafe import Markup
 from galerka.util import asyncached
 
 
-class Root:
-    parent = None
-    lineage = ()
-
-    def __init__(self, request, root_class):
-        self.root_class = root_class
-        self.request = request
-        self.url = request.url_root
-        self.href = Href(request.url_root)
-
-    @asyncio.coroutine
-    def traverse(self, pathinfo):
-        if pathinfo[:1] != ['']:
-            raise LookupError('Attempt to traverse above app root')
-        return (yield from self.root_class(self, '').traverse(pathinfo[1:]))
-
-
 class View:
     def __init__(self, parent, url_fragment, *, request=None):
-        print(self, parent)
         self.parent = parent
-        self.request = parent.request
+        self.request = request or parent.request
         if getattr(self, 'url_fragment', None) is None:
+            assert isinstance(url_fragment, str)
             self.url_fragment = url_fragment
-
-    @classmethod
-    def _get_root(cls, request):
-        return Root(request, cls)
 
     @asyncio.coroutine
     def traverse(self, pathinfo):
@@ -45,14 +24,26 @@ class View:
             return self
         url_fragment = pathinfo[0]
         if url_fragment == '..':
-            return self.parent
-        elif url_fragment == '.':
-            return self
+            if self.parent:
+                child = self.parent
+            else:
+                child = self
+        elif url_fragment == '.' or not url_fragment:
+            child = self
         elif url_fragment in getattr(self, 'child_classes', {}):
             child = self.child_classes[url_fragment](self, url_fragment)
         else:
             child = (yield from self.get_child(url_fragment))
         return (yield from child.traverse(pathinfo[1:]))
+
+    def __getitem__(self, *path):
+        pathinfo = []
+        for fragment in path:
+            if isinstance(fragment, str):
+                pathinfo.extend(fragment.split('/'))
+            else:
+                pathinfo.append(fragment)
+        return self.traverse(pathinfo)
 
     @asyncio.coroutine
     def get_child(self, url_fragment):
@@ -68,15 +59,27 @@ class View:
 
     @cached_property
     def lineage(self):
-        return self.parent.lineage + (self, )
+        parent = self.parent
+        if parent:
+            parent_lineage = parent.lineage
+        else:
+            parent_lineage = ()
+        return parent_lineage + (self, )
 
     @cached_property
     def url(self):
         return self.root.href(self.path)
 
     @cached_property
+    def href(self):
+        if self.parent:
+            return getattr(self.parent.href, self.url_fragment)
+        else:
+            return Href(self.request.url_root)
+
+    @cached_property
     def root(self):
-        return self.lineage[0].parent
+        return self.lineage[0]
 
     @classmethod
     def child(cls, name):

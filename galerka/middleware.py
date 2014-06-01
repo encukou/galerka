@@ -53,7 +53,7 @@ def galerka_app_context(app, *, debug=False):
             'galerka.tempdir': tempdir,
             'galerka.mako': mako,
             'galerka.site-title': 'Galerie',
-            'galerka.get_root': TitlePage._get_root,
+            'galerka.root_class': TitlePage,
         }
 
         def application(environ, start_response):
