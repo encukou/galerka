@@ -1,3 +1,5 @@
+@import "compass/css3/image"
+
 form {
     input[type=submit], input[type=button], textarea, select, input[type=file],
     input[type=password], input[type=text], input[type=search],
@@ -70,10 +72,10 @@ form {
         border: 1.5px solid $dark_secondary_color;
         border-color: transparent;
         position: relative;
-        text-shadow: 0px 1px 1px $light_background.brighten(20%);
-        background-color: -webkit-linear-gradient(top,
-                                                  $mid_background,
-                                                  $dark_background);
+        text-shadow: 0px 1px 1px lighten($light_background, 20%);
+        @include background(linear-gradient(top,
+                                            $mid_background,
+                                            $dark_background));
         font-size: 80%;
 
         &:hover, &:focus {
