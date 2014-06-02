@@ -160,4 +160,12 @@
         font-size: smaller;
     }
 
+    .date-header time {
+        float: right;
+        margin-left: 3em;
+        margin-bottom: 0.5ex;
+        color: $dark_foreground;
+        font-size: 80%;
+        font-family: $sans;
+    }
 }

@@ -23,7 +23,7 @@ class ShoutboxMessage:
     @classmethod
     def from_dict(cls, dict):
         return cls(
-            time=datetime.datetime.fromtimestamp(dict['timestamp']),
+            time=datetime.datetime.utcfromtimestamp(dict['timestamp']),
             author=dict['author-name'],
             body=dict['body'],
         )
@@ -41,20 +41,24 @@ class ShoutboxPage(GalerkaView):
 
     @asyncached
     def rendered_contents(self):
-        return self._render_posts(2, 20)
+        return self._render_posts(2, 20, 'date')
 
     @asyncached
     def rendered_sidebar_posts(self):
-        return self._render_posts(3, 5)
+        return self._render_posts(3, 5, 'compact')
 
-    def _render_posts(self, header_level, number=5):
+    def _render_posts(self, header_level, number=5, date_format='compact'):
         template = self.get_template('widgets/shoutbox_post.mako')
         result = []
         posts = yield from self.request.redis.zrange('shoutbox', -number, -1)
         for post in reversed(list(posts)):
             (post, score) = yield from post
             message = ShoutboxMessage.from_dict(json.loads(post))
-            result.append((yield from template.render_async(message=message)))
+            result.append((yield from template.render_async(
+                message=message,
+                date_format=date_format,
+                header_level=header_level,
+            )))
         return Markup(''.join(result))
 
     @asyncio.coroutine

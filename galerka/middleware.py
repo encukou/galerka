@@ -34,7 +34,8 @@ def galerka_app_context(app, *, redis_url=None, debug=False):
             output_encoding='utf-8',
             filesystem_checks=debug,
             strict_undefined=True,
-            imports=['from markupsafe import escape'],
+            imports=['from markupsafe import escape',
+                     'from galerka import template_helpers as h'],
             default_filters=['escape'],
         )
 

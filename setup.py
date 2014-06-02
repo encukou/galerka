@@ -11,6 +11,7 @@ requires = [
     'pyscss',
     'markdown',
     'asyncio-redis',
+    'pytz',
 ]
 
 if sys.version_info[:3] < (3, 3):
