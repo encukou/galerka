@@ -33,7 +33,7 @@ class ShoutboxMessage:
 class ShoutboxPage(GalerkaView):
     @asyncached
     def title(self):
-        return 'Shoutbox'
+        return 'Kecadlo'
 
     @asyncached
     def rendered_page(self):

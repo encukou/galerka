@@ -30,8 +30,10 @@
         }
 
         .date-header time {
+            display: block;
             float: right;
-            margin-left: 2em;
+            text-align: right;
+            margin-left: 1em;
             margin-bottom: 0.5ex;
             color: $dark_foreground;
         }

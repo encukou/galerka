@@ -12,6 +12,7 @@ requires = [
     'markdown',
     'asyncio-redis',
     'pytz',
+    'jsmin',
 ]
 
 if sys.version_info[:3] < (3, 3):

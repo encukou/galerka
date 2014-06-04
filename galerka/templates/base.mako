@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-  <title>
-    % if (yield from this.title) != request.environ['galerka.site-title']:
-        ${(yield from this.title)} -
-    % endif
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    <title>
+        % if (yield from this.title) != request.environ['galerka.site-title']:
+            ${(yield from this.title)} -
+        % endif
     ${request.environ['galerka.site-title']}
-  </title>
-  <link rel="shortcut icon" href="${static_url('favicon.png')}" />
-  <link rel="stylesheet" href="${static_url('style.css')}"
-        type="text/css" media="screen" charset="utf-8" />
+    </title>
+    <link rel="shortcut icon" href="${static_url('favicon.png')}" />
+    <link rel="stylesheet" href="${static_url('style.css')}"
+          type="text/css" media="screen" charset="utf-8" />
+    <script data-main="${static_url('main')}"
+            src="${static_url('script/lib/require.js')}"></script>
+    <script>require.config({baseUrl: "${static_url('script')}"});</script>
 </head>
 <body class="galerka no-js">
     <header>

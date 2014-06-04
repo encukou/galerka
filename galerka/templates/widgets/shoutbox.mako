@@ -1,5 +1,5 @@
 <details open id="shoutbox">
-    <summary>Shoutbox</summary>
+    <summary>${(yield from (yield from this.root['shoutbox']).title)}</summary>
 
     <form action="${(yield from this.root['shoutbox']).href(redirect=this.url)}"
           method="POST"

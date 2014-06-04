@@ -5,29 +5,45 @@ import pytz
 local_timezone = pytz.timezone('Europe/Prague')
 
 formats = dict(
-    date='{0.day}. {0.month}. {0.year} {0.hour:02}:{0.minute:02}',
-    compact='{0.hour:02}:{0.minute:02}',
+    title='{d.day_cz} {s.day}. {s.month}. {s.year}, {s.hour:02}:{s.minute:02}',
+    date='{s.day}. {s.month}. {s.year} {s.hour:02}:{s.minute:02}',
+    compact='{s.hour:02}:{s.minute:02}',
 )
 
 
 class FormattedDate(object):
-    def __init__(self, date, format, pubdate=False):
+    def __init__(self, date, format):
         assert '"' not in format
         self.format = format
         self.utc_date = date
         self.local_date = pytz.utc.localize(date).astimezone(local_timezone)
-        self.pubdate = pubdate
+
+    @property
+    def day_cz(self):
+        return [
+            None,
+            'Pondělí',
+            'Úterý',
+            'Středa',
+            'Čtvrtek',
+            'Pátek',
+            'Sobota',
+            'Neděle',
+        ][self.local_date.isoweekday()]
 
     def __unicode__(self):
-        return formats[self.format].format(self.local_date)
+        return formats[self.format].format(s=self.local_date, d=self)
     __str__ = __unicode__
 
     def __html__(self):
-        attribs = ['data-dateformat="%s"' % self.format]
-        if self.pubdate:
-            attribs.append(' pubdate="pubdate"')
-        return '<time datetime="%sZ" %s>%s</time>' % (
-            self.utc_date.isoformat(), ' '.join(attribs), self)
+        attribs = [
+            'data-dateformat="%s"' % self.format,
+            'datetime="%sZ"' % self.utc_date.isoformat(),
+            'title="%s"' % FormattedDate(self.utc_date, 'title'),
+        ]
+        return '<time %s>%s</time>' % (
+            ' '.join(attribs),
+            self)
 
 
 def format_date(date, **kwargs):
