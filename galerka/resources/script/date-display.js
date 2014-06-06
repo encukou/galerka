@@ -11,12 +11,12 @@ define(['lib/mootools'], function() {
         var relative = new Date();
         if (future) {
             relative.increment(unit, 1);
-            if (orig_date.get(unit) == relative.get(unit)) return future_str;
+            if (date.get(unit) == relative.get(unit)) return future_str;
         } else {
             relative.decrement(unit, 1);
-            if (orig_date.get(unit) == relative.get(unit)) return past_str;
+            if (date.get(unit) == relative.get(unit)) return past_str;
         }
-        return None;
+        return false;
     }
     function format_long(s, date) {
         var simple, complex;
@@ -38,12 +38,12 @@ define(['lib/mootools'], function() {
         if (min < 90) return simple("před hodinou", "za hodinu");
         var hr = min / 60;
         if (hr < 20) return complex(hr, "před %d hodinami", "za %d hodiny", "za %d hodin");
-        if (days < 2) {
+        var dy = hr / 24;
+        if (dy < 2) {
             var result = neighbor_formatter(date, 'day', future, 'včera', 'zítra');
             if (result) return result;
         }
         if (hr < 42) return simple("před 1 dnem", "za 1 den");
-        var dy = hr / 24;
         if (dy < 6) return complex(dy, "před %d dny", "za %d dny", "za %d dní");
         if (dy < 8) return simple("před týdnem", "za týden");
         var wk = dy / 7;
@@ -72,8 +72,8 @@ define(['lib/mootools'], function() {
         var min = sec / 60;
         var hr = min / 60;
         var dy = hr / 24;
+        var today = new Date();
         if (dy < 2) {
-            var today = new Date();
             if ((hr < 4) || (date.get('date') == today.get('date'))) {
                 return date.get('hours') + ':' + pad2(date.get('minutes'));
             }
