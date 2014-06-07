@@ -78,6 +78,16 @@ class View:
         else:
             return Href(self.request.url_root)
 
+    def static_url(self, path):
+        static_files = self.request.environ['galerka.static_files']
+        item = static_files[path]
+        try:
+            sha = item.sha
+        except AttributeError:
+            return self.root.href.static(path)
+        else:
+            return '%s?%s' % (self.root.href.static(path), sha)
+
     @cached_property
     def root(self):
         return self.lineage[0]
@@ -179,7 +189,7 @@ class GalerkaView(View):
         result = yield from template.render_async(
             this=self,
             request=self.request,
-            static_url=self.root.href.static,
+            static_url=self.static_url,
             redis=self.request.redis,
         )
         return result

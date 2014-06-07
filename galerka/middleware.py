@@ -40,7 +40,8 @@ def galerka_app_context(app, *, redis_url=None, debug=False):
         )
 
         static_dir = tempdir / 'static'
-        create_static_dir(root / 'resources', static_dir, debug=debug)
+        resource_dir = root / 'resources'
+        static_files = create_static_dir(resource_dir, static_dir, debug=debug)
         app = SharedDataMiddleware(app, {'/static': str(static_dir)})
 
         print('Loading view modules:')
@@ -57,6 +58,7 @@ def galerka_app_context(app, *, redis_url=None, debug=False):
             'galerka.site-title': 'Galerie',
             'galerka.root_class': TitlePage,
             'galerka.redis-args': get_redis_args(redis_url),
+            'galerka.static_files': static_files,
         }
 
         def application(environ, start_response):

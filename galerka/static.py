@@ -1,13 +1,86 @@
 import shutil
 import hashlib
 import json
+import pathlib
+import itertools
 
 import scss
 import jsmin
 
 
+class StaticBase:
+    def __init__(self, path):
+        self.path = path
+
+
+class StaticDir(StaticBase):
+    minified = False
+
+    def rel_url(self, base):
+        return self.path.relative_to(base)
+
+    def __repr__(self):
+        fmt = '<{s.__module__}.{s.__class__.__qualname__}>'
+        return fmt.format(s=self)
+
+
+class StaticFile(StaticBase):
+    def __init__(self, path, *,
+                 sha=None,
+                 size=None,
+                 source=None,
+                 source_size=None
+                 ):
+        super().__init__(path)
+        self._sha = sha
+        self._size = size
+        self.source = source
+        self._source_size = source_size
+
+    def __repr__(self):
+        fmt = '<{s.__module__}.{s.__class__.__qualname__} {s.sha}>'
+        return fmt.format(s=self)
+
+    def _get_file_stats(self):
+        with self.path.open('rb') as file:
+            contents = file.read()
+            self._sha = hashlib.sha1(contents).hexdigest()
+            self._size = len(contents)
+
+    @property
+    def sha(self):
+        if self._sha is None:
+            self._get_file_stats()
+        return self._sha
+
+    @property
+    def size(self):
+        if self._size is None:
+            self._size = self.source.stat().size
+        return self._size
+
+    @property
+    def source_size(self):
+        if self._source_size is None:
+            self._get_source_stats()
+        return self._source_size
+
+    @property
+    def minified(self):
+        return self.source and self.source_size != self.size
+
+
+class JSFile(StaticFile):
+    def __init__(self, *args, module_name, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.module_name = module_name
+
+    def rel_url(self, base):
+        return '%s?%s' % (self.path.relative_to(base), self.sha)
+
+
 def json_compact(value):
-    return json.dumps(value, separators=(',', ':'))
+    return json.dumps(value, separators=(',', ':'), sort_keys=True)
 
 
 def transplant_path(path, fromdir, todir):
@@ -15,32 +88,57 @@ def transplant_path(path, fromdir, todir):
 
 
 def create_static_dir(fromdir, todir, *, debug):
+    return {str(item.path.relative_to(todir)): item
+            for item in generate_static_dir(fromdir, todir, debug=debug)}
+
+
+def generate_static_dir(fromdir, todir, *, debug):
     if todir.exists():
         shutil.rmtree(str(todir))
-    todir.mkdir()
 
-    shutil.copyfile(str(fromdir / 'favicon.png'), str(todir / 'favicon.png'))
-    copy_dir(fromdir / 'background', todir / 'background')
+    items = itertools.chain(
+        mkdir(todir),
+        copy_file(fromdir / 'favicon.png', todir / 'favicon.png'),
+        copy_dir(fromdir / 'background', todir / 'background'),
+        create_css(fromdir, todir, debug=debug),
+        create_js(fromdir, todir, debug=debug),
+    )
 
-    create_css(fromdir, todir, debug=debug)
+    for item in items:
+        relpath = item.path.relative_to(todir)
+        srcpath = None
+        if isinstance(item, StaticFile):
+            sha = item.sha
+            if item.minified:
+                fmt = ('{i.sha} {srcpath} → {relpath}: '
+                       '{i.source_size:,} → {i.size:,}b')
+                srcpath = item.source.relative_to(fromdir)
+            else:
+                fmt = '{i.sha} {relpath}: {i.size:,}b'
+        else:
+            fmt = ' ' * 40 + ' {relpath}'
+        print(fmt.format(i=item, relpath=relpath, srcpath=srcpath))
+        yield item
 
-    create_js(fromdir / 'script', todir / 'script', debug=debug)
 
-    print('Static files done')
+def mkdir(dest):
+    dest.mkdir()
+    yield StaticDir(dest)
+
+
+def copy_file(src, dest):
+    shutil.copyfile(str(src), str(dest))
+    yield StaticFile(dest)
 
 
 def copy_dir(fromdir, todir):
-    todir.mkdir()
+    yield from mkdir(todir)
     for path in fromdir.iterdir():
-        print('{} → {}'.format(path.name, todir))
-        shutil.copyfile(
-            str(path),
-            str(transplant_path(path, fromdir, todir))
-        )
+        dest_path = transplant_path(path, fromdir, todir)
+        yield from copy_file(path, dest_path)
 
 
 def create_css(fromdir, todir, *, debug):
-    print('Compiling CSS')
     css_source_path = fromdir / 'style'
     if debug:
         scss_style = 'expanded'
@@ -54,34 +152,42 @@ def create_css(fromdir, todir, *, debug):
             'style': scss_style,
         },
     )
-    with (todir / 'style.css').open('w') as cssfile:
+    dest_filename = todir / 'style.css'
+    with (dest_filename).open('w') as cssfile:
         source_file = css_source_path / 'root.scss'
         cssfile.write(scss_compiler.compile(scss_file=str(source_file)))
+    yield StaticFile(dest_filename)
 
 
 def create_js(fromdir, todir, *, debug):
-    print('Compiling JS')
     conf_values = {
         'paths': {},
     }
-    for item in _create_js_dir(fromdir, todir, debug, fromdir, todir):
-        if item['minified']:
-            fmt = ('{i[sha]} {i[source]} → {i[dest]}: '
-                   '{i[source_len]:,} → {i[dest_len]:,}b')
+    basefrom = fromdir / 'script'
+    basepath = todir / 'script'
+    for item in _create_js_dir(basefrom, basepath, debug, basepath):
+        yield item
+        try:
+            module_name = item.module_name
+        except AttributeError:
+            pass
         else:
-            fmt = '{i[sha]} {i[dest]}: {i[dest_len]:,}b'
-        print(fmt.format(i=item))
-        conf_values['paths'][str(item['mod_name'])] = item['rel_url']
-    with (todir / 'require.conf.js').open('w') as conf_file:
+            conf_values['paths'][module_name] = item.rel_url(basepath)
+
+    conf_module_name = 'require.conf'
+    conf_path = basepath / (conf_module_name + '.js')
+    with conf_path.open('w') as conf_file:
         for key, value in conf_values.items():
             conf_file.write('require[%s]=%s;\n' % (json_compact(key),
                                                    json_compact(value)))
-        with (todir / 'lib' / 'require.js').open() as require_file:
+        with (basepath / 'lib' / 'require.js').open() as require_file:
             conf_file.write(require_file.read())
 
+    yield JSFile(conf_path, module_name=conf_module_name)
 
-def _create_js_dir(fromdir, todir, debug, fromroot, toroot):
-    todir.mkdir()
+
+def _create_js_dir(fromdir, todir, debug, basepath):
+    yield from mkdir(todir)
     for source in sorted(fromdir.iterdir()):
         if source.name.startswith('.'):
             # hidden file
@@ -90,17 +196,16 @@ def _create_js_dir(fromdir, todir, debug, fromroot, toroot):
             yield from _create_js_dir(
                 source,
                 transplant_path(source, fromdir, todir),
-                debug, fromroot, toroot
+                debug, basepath,
             )
         elif '.js' in source.suffixes:
             base_name = source.name.split('.', 2)[0]
             dest = todir / (base_name + '.js')
-            src_relative = source.relative_to(fromroot)
-            dest_relative = dest.relative_to(toroot)
-            mod_name = dest_relative.with_name(base_name)
+            dest_relative = dest.relative_to(basepath)
+            mod_name = str(dest_relative.with_name(base_name))
             with source.open() as srcfile, dest.open('a') as destfile:
                 js = srcfile.read()
-                source_len = len(js)
+                source_size = len(js)
                 if '.min' not in source.suffixes and not debug:
                     js = jsmin.jsmin(js)
                     minified = True
@@ -108,13 +213,11 @@ def _create_js_dir(fromdir, todir, debug, fromroot, toroot):
                     minified = False
                 sha = hashlib.sha1(js.encode('utf-8')).hexdigest()
                 destfile.write(js)
-                yield {
-                    'source': src_relative,
-                    'dest': dest_relative,
-                    'sha': sha,
-                    'source_len': source_len,
-                    'dest_len': len(js),
-                    'minified': minified,
-                    'mod_name': mod_name,
-                    'rel_url': '%s?%s' % (dest_relative, sha),
-                }
+                yield JSFile(
+                    dest,
+                    sha=sha,
+                    size=len(js),
+                    source=source,
+                    source_size=source_size,
+                    module_name=mod_name,
+                )
