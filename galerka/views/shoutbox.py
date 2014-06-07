@@ -41,7 +41,7 @@ class ShoutboxPage(GalerkaView):
 
     @asyncached
     def rendered_contents(self):
-        return self._render_posts(2, 20, 'date')
+        return self._render_posts(2, 20, 'interval')
 
     @asyncached
     def rendered_sidebar_posts(self):

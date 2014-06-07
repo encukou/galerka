@@ -10,12 +10,17 @@ formats = dict(
     title='{d.day_cz} {s.day}. {s.month}. {s.year}, {s.hour:02}:{s.minute:02}',
     date='{s.day}. {s.month}. {s.year} {s.hour:02}:{s.minute:02}',
     compact='{s.hour:02}:{s.minute:02}',
+    compact_date='{s.day}. {s.month}. {s.year}',
 )
+formats['interval'] = formats['date']
 
 
 class FormattedDate(object):
     def __init__(self, date, format):
         assert '"' not in format
+        if format == 'compact':
+            if abs((date - datetime.datetime.now()).seconds) / 3600 < 18:
+                format = 'compact_date'
         self.format = format
         self.utc_date = date
         self.local_date = pytz.utc.localize(date).astimezone(local_timezone)

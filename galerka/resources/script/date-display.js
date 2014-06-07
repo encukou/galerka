@@ -9,24 +9,24 @@ define(['lib/mootools'], function () {
         }
         return str5.replace(/%d/i, value);
     }
-    function neighbor_formatter(date, unit, future, past_str, future_str) {
-        var relative = new Date();
+    function neighbor_formatter(then, now, unit, future,
+                                past_str, future_str) {
+        var relative = new Date(now);
         if (future) {
             relative.increment(unit, 1);
-            if (date.get(unit) === relative.get(unit)) {
+            if (then.get(unit) === relative.get(unit)) {
                 return future_str;
             }
         } else {
             relative.decrement(unit, 1);
-            if (date.get(unit) === relative.get(unit)) {
+            if (then.get(unit) === relative.get(unit)) {
                 return past_str;
             }
         }
         return false;
     }
-    function format_long(s, date) {
-        var simple,
-            complex,
+    function format_long(then, now) {
+        var s = now.diff(then, 'second'),
             future = s > 0,
             sec = Math.abs(s),
             min = sec / 60,
@@ -35,7 +35,9 @@ define(['lib/mootools'], function () {
             wk = dy / 7,
             mon = dy / 30.5,
             yr = mon / 12,
-            result;
+            result,
+            simple,
+            complex;
         if (future) {
             simple = function (past, future) { return future; };
             complex = function (num, past, f1, f5) {
@@ -71,8 +73,8 @@ define(['lib/mootools'], function () {
                            "za %d hodiny", "za %d hodin");
         }
         if (dy < 2) {
-            result = neighbor_formatter(date, 'day', future,
-                                            'včera', 'zítra');
+            result = neighbor_formatter(then, now, 'day', future,
+                                        'včera', 'zítra');
             if (result) { return result; }
         }
         if (hr < 42) {
@@ -81,14 +83,14 @@ define(['lib/mootools'], function () {
         if (dy < 6) {
             return complex(dy, "před %d dny", "za %d dny", "za %d dní");
         }
-        if (dy < 8) {
+        if (Math.round(wk) <= 1) {
             return simple("před týdnem", "za týden");
         }
         if (wk < 3.5) {
-            return complex(wk, "před %s týdny", "za %s týdny", "za %s týdnů");
+            return complex(wk, "před %d týdny", "za %d týdny", "za %d týdnů");
         }
         if (mon < 2) {
-            result = neighbor_formatter(date, 'month', future,
+            result = neighbor_formatter(then, now, 'month', future,
                                         'minulý měsíc', 'příští měsíc');
             if (result) { return result; }
         }
@@ -100,7 +102,7 @@ define(['lib/mootools'], function () {
                            "za %d měsíce", "za %d měsíců");
         }
         if (yr < 2) {
-            result = neighbor_formatter(date, 'month', future,
+            result = neighbor_formatter(then, now, 'year', future,
                                         'loni', 'příští rok');
             if (result) { return result; }
         }
@@ -113,46 +115,47 @@ define(['lib/mootools'], function () {
         if (n < 10) { return '0' + n.toString(); }
         return n;
     }
-    function format_short(s, date) {
-        var sec = Math.abs(s),
+    function format_short(then, now) {
+        var s = now.diff(then, 'second'),
+            sec = Math.abs(s),
             min = sec / 60,
             hr = min / 60,
             dy = hr / 24,
-            today = new Date(),
             yesterday,
             tomorrow,
             month_day;
         if (dy < 2) {
-            if ((hr < 4) || (date.get('date') === today.get('date'))) {
-                return date.get('hours') + ':' + pad2(date.get('minutes'));
+            if (then.get('date') === now.get('date')) {
+                return then.get('hours') + ':' + pad2(then.get('minutes'));
             }
-            yesterday = new Date();
+            yesterday = new Date(now);
             yesterday.decrement('day', 1);
-            if (date.get('date') === yesterday.get('date')) { return 'včera'; }
-            tomorrow = new Date();
+            if (then.get('date') === yesterday.get('date')) { return 'včera'; }
+            tomorrow = new Date(now);
             tomorrow.increment('day', 1);
-            if (date.get('date') === tomorrow.get('date')) { return 'zítra'; }
+            if (then.get('date') === tomorrow.get('date')) { return 'zítra'; }
         }
-        month_day = date.get('date') + '. ' + pad2(date.get('month'));
-        if (date.get('year') === today.getYear('year')) { return month_day; }
-        return month_day + '. ' + date.get('year');
+        month_day = then.get('date') + '. ' + (then.get('month') + 1) + '.';
+        if (then.get('year') === now.get('year')) { return month_day; }
+        return month_day + ' ' + then.get('year');
     }
-    function update(element) {
-        var now = new Date(),
-            then,
-            difference;
+    function format(then, now, fmt) {
+        if (fmt === 'compact') {
+            return format_short(then, now);
+        }
+        return format_long(then, now);
+    }
+    function update(element, now) {
         if (element === undefined) {
             element = document.id(document);
         }
+        if (now === undefined) {
+            now = new Date();
+        }
         element.getElements('time').each(function (el) {
-            then = new Date();
-            then.parse(el.getProperty('datetime'));
-            difference = now.diff(then, 'second');
-            if (el.getProperty('data-dateformat') === 'compact') {
-                el.set('text', format_short(difference, then));
-            } else {
-                el.set('text', format_long(difference, then));
-            }
+            var then = new Date(el.getProperty('datetime')),
+                fmt = el.getProperty('data-dateformat');
+            el.set('text', format(then, now, fmt));
         });
     }
     function start() {
@@ -161,5 +164,6 @@ define(['lib/mootools'], function () {
     }
     return {
         start: start,
+        format: format,
     };
 });

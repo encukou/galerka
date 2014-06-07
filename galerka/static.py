@@ -98,10 +98,11 @@ def generate_static_dir(fromdir, todir, *, debug):
 
     items = itertools.chain(
         mkdir(todir),
-        copy_file(fromdir / 'favicon.png', todir / 'favicon.png'),
         copy_dir(fromdir / 'background', todir / 'background'),
         create_css(fromdir, todir, debug=debug),
         create_js(fromdir, todir, debug=debug),
+        copy_file(fromdir / 'favicon.png', todir / 'favicon.png'),
+        copy_file(fromdir / 'style/qunit.css', todir / 'qunit.css'),
     )
 
     for item in items:
@@ -162,6 +163,10 @@ def create_css(fromdir, todir, *, debug):
 def create_js(fromdir, todir, *, debug):
     conf_values = {
         'paths': {},
+        'shim': {
+            'lib/mootools': {'exports': '$'},
+            'lib/qunit': {'exports': 'QUnit'},
+        }
     }
     basefrom = fromdir / 'script'
     basepath = todir / 'script'

@@ -42,7 +42,12 @@ def galerka_app_context(app, *, redis_url=None, debug=False):
         static_dir = tempdir / 'static'
         resource_dir = root / 'resources'
         static_files = create_static_dir(resource_dir, static_dir, debug=debug)
-        app = SharedDataMiddleware(app, {'/static': str(static_dir)})
+        app = SharedDataMiddleware(
+            app,
+            {'/static': str(static_dir)},
+            cache=True,
+            cache_timeout=3600*356,
+        )
 
         print('Loading view modules:')
         for module in TitlePage._load_all_views():

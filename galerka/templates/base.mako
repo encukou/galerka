@@ -9,12 +9,14 @@
     ${request.environ['galerka.site-title']}
     </title>
     <link rel="shortcut icon" href="${static_url('favicon.png')}" />
-    <link rel="stylesheet" href="${static_url('style.css')}"
-          type="text/css" media="screen" charset="utf-8" />
+    % for style in this.styles:
+        <link rel="stylesheet" href="${static_url(style)}"
+            type="text/css" media="screen" charset="utf-8" />
+    % endfor
     <script>${h.js_export(
         require={
             'baseUrl': static_url('script'),
-            'deps': ['main'],
+            'deps': sorted(this.javascripts),
         },
     )}</script>
     <script src="${static_url('script/require.conf.js')}"

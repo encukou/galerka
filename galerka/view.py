@@ -134,6 +134,9 @@ class View:
 
 
 class GalerkaView(View):
+    extra_javascripts = ['main']
+    styles = ['style.css']
+
     @cached_property
     def GET(self):
         try:
@@ -171,6 +174,10 @@ class GalerkaView(View):
             return post()
 
     @asyncached
+    def rendered_page(self):
+        return (yield from self.render_template('base.mako'))
+
+    @asyncached
     def rendered_hierarchy(self):
         result = []
         for page in self.lineage:
@@ -192,4 +199,11 @@ class GalerkaView(View):
             static_url=self.static_url,
             redis=self.request.redis,
         )
+        return result
+
+    @cached_property
+    def javascripts(self):
+        result = set(self.extra_javascripts)
+        for cls in type(self).mro():
+            result.update(getattr(cls, 'extra_javascripts', ()))
         return result

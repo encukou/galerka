@@ -12,16 +12,14 @@ from galerka.util import asyncached
 class TestPage(GalerkaView):
     @asyncached
     def title(self):
-        return 'Testovací  stránka'
-
-    @asyncached
-    def rendered_page(self):
-        return (yield from self.render_template('base.mako'))
+        return 'Testovací stránka'
 
     @asyncached
     def rendered_contents(self):
         return Markup(markdown.markdown(textwrap.dedent('''
             Styling test.
+
+            Also see: [JS test]({jsurl})
 
             # h1
             ## h2
@@ -73,4 +71,18 @@ class TestPage(GalerkaView):
             That would be all.
 
             <div class="signature">Sincerely, me</div>
-        ''')))
+        '''))).format(jsurl=(yield from self['js']).url)
+
+
+@TestPage.child('js')
+class TestPage(GalerkaView):
+    extra_javascripts = ['test']
+    styles = ['qunit.css']
+
+    @asyncached
+    def title(self):
+        return 'JS Test'
+
+    @asyncached
+    def rendered_contents(self):
+        return Markup('<div id="qunit"></div><div id="qunit-fixture"></div>')
