@@ -1,101 +1,154 @@
 /* Dynamic fuzzy date display */
 
-define(['lib/mootools'], function() {
+define(['lib/mootools'], function () {
     "use strict";
     function complex_formatter(value, str1, str5) {
         value = Math.round(value);
-        if (value < 5) return str1.replace(/%d/i, value);
+        if (value < 5) {
+            return str1.replace(/%d/i, value);
+        }
         return str5.replace(/%d/i, value);
     }
     function neighbor_formatter(date, unit, future, past_str, future_str) {
         var relative = new Date();
         if (future) {
             relative.increment(unit, 1);
-            if (date.get(unit) == relative.get(unit)) return future_str;
+            if (date.get(unit) === relative.get(unit)) {
+                return future_str;
+            }
         } else {
             relative.decrement(unit, 1);
-            if (date.get(unit) == relative.get(unit)) return past_str;
+            if (date.get(unit) === relative.get(unit)) {
+                return past_str;
+            }
         }
         return false;
     }
     function format_long(s, date) {
-        var simple, complex;
-        var future = s > 0;
+        var simple,
+            complex,
+            future = s > 0,
+            sec = Math.abs(s),
+            min = sec / 60,
+            hr = min / 60,
+            dy = hr / 24,
+            wk = dy / 7,
+            mon = dy / 30.5,
+            yr = mon / 12,
+            result;
         if (future) {
-            simple = function(past, future) {return future;};
-            complex = function(num, past, f1, f5) {return complex_formatter(num, f1, f2);};
-        }else{
-            simple = function(past, future) {return past;};
-            complex = function(num, past, f1, f5) {return complex_formatter(num, past, past);};
+            simple = function (past, future) { return future; };
+            complex = function (num, past, f1, f5) {
+                return complex_formatter(num, f1, f5);
+            };
+        } else {
+            simple = function (past, future) { return past; };
+            complex = function (num, past, f1, f5) {
+                return complex_formatter(num, past, past);
+            };
         }
-        var sec = Math.abs(s)
-        if (sec < 45) return simple("před chvilkou", "za chvilku");
-        if (sec < 90) return simple("před minutou", "za minutu");
-        var min = sec / 60;
-        if (min < 10) return complex(min, "před %d minutami", "za %d minuty", "za %d minut");
-        if (min < 20) return simple("před čtvrt hodinou", "za čtvrt hodiny");
-        if (min < 45) return simple("před půl hodinou", "za půl hodiny");
-        if (min < 90) return simple("před hodinou", "za hodinu");
-        var hr = min / 60;
-        if (hr < 20) return complex(hr, "před %d hodinami", "za %d hodiny", "za %d hodin");
-        var dy = hr / 24;
+        if (sec < 45) {
+            return simple("před chvilkou", "za chvilku");
+        }
+        if (sec < 90) {
+            return simple("před minutou", "za minutu");
+        }
+        if (min < 10) {
+            return complex(min, "před %d minutami", "za %d minuty",
+                           "za %d minut");
+        }
+        if (min < 20) {
+            return simple("před čtvrt hodinou", "za čtvrt hodiny");
+        }
+        if (min < 45) {
+            return simple("před půl hodinou", "za půl hodiny");
+        }
+        if (min < 90) {
+            return simple("před hodinou", "za hodinu");
+        }
+        if (hr < 20) {
+            return complex(hr, "před %d hodinami",
+                           "za %d hodiny", "za %d hodin");
+        }
         if (dy < 2) {
-            var result = neighbor_formatter(date, 'day', future, 'včera', 'zítra');
-            if (result) return result;
+            result = neighbor_formatter(date, 'day', future,
+                                            'včera', 'zítra');
+            if (result) { return result; }
         }
-        if (hr < 42) return simple("před 1 dnem", "za 1 den");
-        if (dy < 6) return complex(dy, "před %d dny", "za %d dny", "za %d dní");
-        if (dy < 8) return simple("před týdnem", "za týden");
-        var wk = dy / 7;
-        if (wk < 3.5) return complex(wk, "před %s týdny", "za %s týdny", "za %s týdnů");
-        var mon = dy / 30.5;
+        if (hr < 42) {
+            return simple("před 1 dnem", "za 1 den");
+        }
+        if (dy < 6) {
+            return complex(dy, "před %d dny", "za %d dny", "za %d dní");
+        }
+        if (dy < 8) {
+            return simple("před týdnem", "za týden");
+        }
+        if (wk < 3.5) {
+            return complex(wk, "před %s týdny", "za %s týdny", "za %s týdnů");
+        }
         if (mon < 2) {
-            var result = neighbor_formatter(date, 'month', future, 'minulý měsíc', 'příští měsíc');
-            if (result) return result;
+            result = neighbor_formatter(date, 'month', future,
+                                        'minulý měsíc', 'příští měsíc');
+            if (result) { return result; }
         }
-        if (dy < 45) return simple("před měsícem", "za měsíc");
-        if (mon < 14) return complex(mon, "před %d měsíci", "za %d měsíce", "za %d měsíců");
-        var yr = mon / 12;
+        if (dy < 45) {
+            return simple("před měsícem", "za měsíc");
+        }
+        if (mon < 14) {
+            return complex(mon, "před %d měsíci",
+                           "za %d měsíce", "za %d měsíců");
+        }
         if (yr < 2) {
-            var result = neighbor_formatter(date, 'month', future, 'loni', 'příští rok');
-            if (result) return result;
+            result = neighbor_formatter(date, 'month', future,
+                                        'loni', 'příští rok');
+            if (result) { return result; }
         }
-        if (yr < 1.5) return simple("před rokem", "za rok");
+        if (yr < 1.5) {
+            return simple("před rokem", "za rok");
+        }
         return complex(yr, "před %d lety", "za %d roky", "za %d let");
     }
     function pad2(n) {
-        if (n < 10) return '0' + ('' + n);
+        if (n < 10) { return '0' + n.toString(); }
         return n;
     }
     function format_short(s, date) {
-        var sec = Math.abs(s)
-        var min = sec / 60;
-        var hr = min / 60;
-        var dy = hr / 24;
-        var today = new Date();
+        var sec = Math.abs(s),
+            min = sec / 60,
+            hr = min / 60,
+            dy = hr / 24,
+            today = new Date(),
+            yesterday,
+            tomorrow,
+            month_day;
         if (dy < 2) {
-            if ((hr < 4) || (date.get('date') == today.get('date'))) {
+            if ((hr < 4) || (date.get('date') === today.get('date'))) {
                 return date.get('hours') + ':' + pad2(date.get('minutes'));
             }
-            var yesterday = new Date();
+            yesterday = new Date();
             yesterday.decrement('day', 1);
-            if (date.get('date') == yesterday.get('date')) return 'včera';
-            var tomorrow = new Date();
+            if (date.get('date') === yesterday.get('date')) { return 'včera'; }
+            tomorrow = new Date();
             tomorrow.increment('day', 1);
-            if (date.get('date') == tomorrow.get('date')) return 'zítra';
+            if (date.get('date') === tomorrow.get('date')) { return 'zítra'; }
         }
-        var month_day = date.get('date') + '. ' + pad2(date.get('month'));
-        if (date.get('year') == today.getYear('year')) return month_day;
+        month_day = date.get('date') + '. ' + pad2(date.get('month'));
+        if (date.get('year') === today.getYear('year')) { return month_day; }
         return month_day + '. ' + date.get('year');
     }
-    function update() {
-        var element = document.id(document);
-        var now = new Date();
-        element.getElements('time').each(function(el) {
-            var then = new Date();
+    function update(element) {
+        var now = new Date(),
+            then,
+            difference;
+        if (element === undefined) {
+            element = document.id(document);
+        }
+        element.getElements('time').each(function (el) {
+            then = new Date();
             then.parse(el.getProperty('datetime'));
-            var difference = now.diff(then, 'second');
-            if (el.getProperty('data-dateformat') == 'compact') {
+            difference = now.diff(then, 'second');
+            if (el.getProperty('data-dateformat') === 'compact') {
                 el.set('text', format_short(difference, then));
             } else {
                 el.set('text', format_long(difference, then));
@@ -108,5 +161,5 @@ define(['lib/mootools'], function() {
     }
     return {
         start: start,
-    }
+    };
 });
