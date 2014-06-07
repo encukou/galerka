@@ -11,9 +11,14 @@
     <link rel="shortcut icon" href="${static_url('favicon.png')}" />
     <link rel="stylesheet" href="${static_url('style.css')}"
           type="text/css" media="screen" charset="utf-8" />
-    <script data-main="${static_url('main')}"
-            src="${static_url('script/lib/require.js')}"></script>
-    <script>require.config({baseUrl: "${static_url('script')}"});</script>
+    <script>${h.js_export(
+        require={
+            'baseUrl': static_url('script'),
+            'deps': ['main'],
+        },
+    )}</script>
+    <script src="${static_url('script/require.conf.js')}"
+            async="async"></script>
 </head>
 <body class="galerka no-js">
     <header>

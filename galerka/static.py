@@ -1,7 +1,13 @@
 import shutil
+import hashlib
+import json
 
 import scss
 import jsmin
+
+
+def json_compact(value):
+    return json.dumps(value, separators=(',', ':'))
 
 
 def transplant_path(path, fromdir, todir):
@@ -53,29 +59,62 @@ def create_css(fromdir, todir, *, debug):
         cssfile.write(scss_compiler.compile(scss_file=str(source_file)))
 
 
-def create_js(fromdir, todir, *, debug, _rootdir=None):
-    if _rootdir is None:
-        print('Compiling JS')
-        _rootdir = fromdir
+def create_js(fromdir, todir, *, debug):
+    print('Compiling JS')
+    conf_values = {
+        'paths': {},
+    }
+    for item in _create_js_dir(fromdir, todir, debug, fromdir, todir):
+        if item['minified']:
+            fmt = ('{i[sha]} {i[source]} → {i[dest]}: '
+                   '{i[source_len]:,} → {i[dest_len]:,}b')
+        else:
+            fmt = '{i[sha]} {i[dest]}: {i[dest_len]:,}b'
+        print(fmt.format(i=item))
+        conf_values['paths'][str(item['mod_name'])] = item['rel_url']
+    with (todir / 'require.conf.js').open('w') as conf_file:
+        for key, value in conf_values.items():
+            conf_file.write('require[%s]=%s;\n' % (json_compact(key),
+                                                   json_compact(value)))
+        with (todir / 'lib' / 'require.js').open() as require_file:
+            conf_file.write(require_file.read())
+
+
+def _create_js_dir(fromdir, todir, debug, fromroot, toroot):
     todir.mkdir()
     for source in sorted(fromdir.iterdir()):
         if source.name.startswith('.'):
             # hidden file
             pass
         elif source.is_dir():
-            create_js(source, transplant_path(source, fromdir, todir),
-                      debug=debug,
-                      _rootdir=_rootdir)
+            yield from _create_js_dir(
+                source,
+                transplant_path(source, fromdir, todir),
+                debug, fromroot, toroot
+            )
         elif '.js' in source.suffixes:
-            dest = todir / (source.name.split('.', 2)[0] + '.js')
+            base_name = source.name.split('.', 2)[0]
+            dest = todir / (base_name + '.js')
+            src_relative = source.relative_to(fromroot)
+            dest_relative = dest.relative_to(toroot)
+            mod_name = dest_relative.with_name(base_name)
             with source.open() as srcfile, dest.open('a') as destfile:
-                relpath = source.relative_to(_rootdir)
                 js = srcfile.read()
+                source_len = len(js)
                 if '.min' not in source.suffixes and not debug:
-                    source_len = len(js)
                     js = jsmin.jsmin(js)
-                    print('{0}: {1:,} → {2:,}b'.format(
-                        relpath, source_len, len(js)))
+                    minified = True
                 else:
-                    print('{0}: {1:,}b'.format(relpath, len(js)))
+                    minified = False
+                sha = hashlib.sha1(js.encode('utf-8')).hexdigest()
                 destfile.write(js)
+                yield {
+                    'source': src_relative,
+                    'dest': dest_relative,
+                    'sha': sha,
+                    'source_len': source_len,
+                    'dest_len': len(js),
+                    'minified': minified,
+                    'mod_name': mod_name,
+                    'rel_url': '%s?%s' % (dest_relative, sha),
+                }

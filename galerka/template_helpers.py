@@ -1,6 +1,8 @@
 import datetime
+import json as json_module
 
 import pytz
+from markupsafe import Markup
 
 local_timezone = pytz.timezone('Europe/Prague')
 
@@ -49,3 +51,20 @@ class FormattedDate(object):
 def format_date(date, **kwargs):
     kwargs.setdefault('format', 'date')
     return FormattedDate(date, **kwargs)
+
+
+def json(data):
+    return Markup(json_module.dumps(data))
+
+
+def js_export(**decls):
+    exports = []
+    for name, data in decls.items():
+        dump = json_module.dumps(
+            data,
+            ensure_ascii=False,
+            separators=(',', ':'),
+            sort_keys=True,
+        )
+        exports.append(Markup('var %s=%s;' % (name, dump)))
+    return Markup().join(exports)
