@@ -4,3 +4,5 @@ require(['date-display', 'lib/domReady'], function (date_display, domready) {
         date_display.start();
     });
 });
+
+require(['shoutbox']);

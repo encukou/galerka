@@ -8,10 +8,15 @@ import time
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest
 from markupsafe import Markup
+import asyncio_redis
 
 from galerka.view import GalerkaView
 from galerka.views.index import TitlePage
 from galerka.util import asyncached
+
+
+class CollisionError(Exception):
+    '''Message timestamp collision'''
 
 
 class ShoutboxMessage:
@@ -49,8 +54,10 @@ class ShoutboxPage(GalerkaView):
 
     def _render_posts(self, header_level, number=5, date_format='compact'):
         template = self.get_template('widgets/shoutbox_post.mako')
+        redis = yield from self.request.redis
+        prefix = self.request.redis_prefix
         result = []
-        posts = yield from self.request.redis.zrange('shoutbox', -number, -1)
+        posts = yield from redis.zrange(prefix + 'shoutbox', -number, -1)
         for post in reversed(list(posts)):
             (post, score) = yield from post
             message = ShoutboxMessage.from_dict(json.loads(post))
@@ -68,13 +75,42 @@ class ShoutboxPage(GalerkaView):
         except KeyError:
             raise BadRequest('Post content required')
         if body.strip():
-            timestamp = time.time()
+            redis = yield from self.request.redis
+            prefix = self.request.redis_prefix
+            while True:
+                try:
+                    timestamp = time.time()
+                    data = json.dumps({
+                        'timestamp': timestamp,
+                        'author': None,
+                        'author-name': self.request.environ['REMOTE_ADDR'],
+                        'body': body,
+                    })
+                    t = yield from redis.multi(watch=[prefix + 'shoutbox'])
+                    dupe = yield from redis.zrangebyscore(
+                        prefix + 'shoutbox',
+                        asyncio_redis.ZScoreBoundary(timestamp,
+                                                     exclude_boundary=False),
+                        asyncio_redis.ZScoreBoundary('+inf'),
+                    )
+                    ld = list(dupe)
+                    if ld:
+                        raise CollisionError
+                    yield from t.zadd(prefix + 'shoutbox', {data: timestamp})
+                    yield from t.exec()
+                except (asyncio_redis.TransactionError, CollisionError) as e:
+                    print('Blocked!', repr(body), type(e))
+                    yield from asyncio.sleep(1)
+                    continue
+                else:
+                    print('Added!', data)
+                    break
+            status = '201 Created'
+        else:
             data = json.dumps({
-                'timestamp': timestamp,
-                'author': None,
-                'author-name': self.request.environ['REMOTE_ADDR'],
-                'author-url': None,
-                'body': body,
+                'error': {
+                    'body': 'must not be empty',
+                },
             })
-            yield from self.request.redis.zadd('shoutbox', {data: timestamp})
-        return self.request.args.get('redirect', self.root.url)
+            status = '400 Bad Request'
+        return status, data, self.request.args.get('redirect', self.root.url)

@@ -26,8 +26,11 @@ class GalerkaRequest(Request, RedisMixin):
 @asyncio.coroutine
 def application(environ, start_response):
     if environ['galerka.debug']:
-        print('Handling request')
-        pprintpp.pprint(environ)
+        # pprintpp.pprint(environ)
+        # print('Handling request')
+        print(environ['SERVER_PROTOCOL'],
+              environ['REQUEST_METHOD'],
+              environ['RAW_URI'])
     request = GalerkaRequest(environ)
     root = environ['galerka.root_class'](None, '', request=request)
     pathinfo = environ['PATH_INFO'].rstrip('/').split('/')

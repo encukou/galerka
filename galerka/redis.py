@@ -1,6 +1,6 @@
 import asyncio
 
-from asyncio_redis import Pool, Connection
+from asyncio_redis import Pool, Connection, TransactionError
 from werkzeug.urls import url_parse
 from werkzeug.utils import cached_property
 
@@ -40,12 +40,12 @@ def get_redis_args(url):
 
 class RedisMixin:
     @asyncached
-    def redis_connection(self):
+    def redis(self):
         args, poolsize, prefix = self.environ['galerka.redis-args']
         return (yield from Pool.create(poolsize=poolsize, **args))
 
     @cached_property
-    def redix_prefix(self):
+    def redis_prefix(self):
         return self.environ['galerka.redis-args'][2]
 
     @asyncio.coroutine
@@ -54,39 +54,3 @@ class RedisMixin:
         conn = yield from Connection.create(**args)
         subscriber = yield from connection.start_subscribe()
         return subscriber
-
-    @cached_property
-    def redis(self):
-        return RedisProxy(self)
-
-
-class RedisProxy:
-    def __init__(self, request):
-        self.request = request
-        self.prefix = request.redix_prefix
-
-    @property
-    def conn(self):
-        return self.request.redis_connection
-
-    def lrange(self, key, start=0, stop=-1):
-        conn = yield from self.conn
-        reply = conn.lrange(self.prefix + key, start, stop)
-        return (yield from reply)
-
-    def lpush(self, key, values):
-        conn = yield from self.conn
-        reply = conn.lpush(self.prefix + key, values)
-        return (yield from reply)
-
-    def zadd(self, key, values):
-        conn = yield from self.conn
-        reply = conn.zadd(self.prefix + key, values)
-        return (yield from reply)
-
-    def zrange(self, key, start=0, stop=-1):
-        conn = yield from self.conn
-        reply = conn.zrange(self.prefix + key, start, stop)
-        return (yield from reply)
-
-    # TODO: Proxy all the others

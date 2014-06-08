@@ -159,18 +159,25 @@ class GalerkaView(View):
         else:
             @asyncio.coroutine
             def post():
-                url = yield from do_post()
-                content = Markup('''
-                    <head>
-                        <title>OK</title>
-                    </head>
-                    <body>
-                        <h1>OK</h1>
-                        <p>→ <a href="{}">{}</a></p>
-                    </body>
-                ''').format(Markup(url), url)
-                return Response(content, 303, mimetype='text/html',
-                                headers={'Location': url})
+                status, data, url = yield from do_post()
+                if self.request.headers['accept'] == 'application/json':
+                    return Response(data,
+                                    status=status,
+                                    headers={'Content-Type':
+                                             'application/json'})
+                else:
+                    content = Markup('''
+                        <head>
+                            <title>OK</title>
+                        </head>
+                        <body>
+                            <h1>OK</h1>
+                            <p>→ <a href="{}">{}</a></p>
+                            <p>({})</p>
+                        </body>
+                    ''').format(Markup(url), url, status)
+                    return Response(content, 303, mimetype='text/html',
+                                    headers={'Location': url})
             return post()
 
     @asyncached

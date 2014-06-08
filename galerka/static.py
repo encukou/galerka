@@ -99,6 +99,7 @@ def generate_static_dir(fromdir, todir, *, debug):
     items = itertools.chain(
         mkdir(todir),
         copy_dir(fromdir / 'background', todir / 'background'),
+        copy_dir(fromdir / 'img', todir / 'img'),
         create_css(fromdir, todir, debug=debug),
         create_js(fromdir, todir, debug=debug),
         copy_file(fromdir / 'favicon.png', todir / 'favicon.png'),
