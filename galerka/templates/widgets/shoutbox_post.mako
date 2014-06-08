@@ -1,4 +1,4 @@
-<section>
+<section data-stamp="${message.stamp}">
     <h${header_level} class="date-header">
         ${h.format_date(message.time, format=date_format)}
         % if message.author:

@@ -186,6 +186,8 @@ def create_js(fromdir, todir, *, debug):
         for key, value in conf_values.items():
             conf_file.write('require[%s]=%s;\n' % (json_compact(key),
                                                    json_compact(value)))
+        if debug:
+            conf_file.write("require['config']['debug']['on']=true;\n")
         with (basepath / 'lib' / 'require.js').open() as require_file:
             conf_file.write(require_file.read())
 

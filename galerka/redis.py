@@ -49,8 +49,6 @@ class RedisMixin:
         return self.environ['galerka.redis-args'][2]
 
     @asyncio.coroutine
-    def redis_subscribe(self):
+    def redis_single_connection(self):
         args, poolsize, prefix = self.environ['galerka.redis-args']
-        conn = yield from Connection.create(**args)
-        subscriber = yield from connection.start_subscribe()
-        return subscriber
+        return (yield from Connection.create(**args))

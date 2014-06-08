@@ -6,3 +6,5 @@ require(['date-display', 'lib/domReady'], function (date_display, domready) {
 });
 
 require(['shoutbox']);
+
+require(['ws']);

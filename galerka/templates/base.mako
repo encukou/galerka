@@ -17,6 +17,14 @@
         require={
             'baseUrl': static_url('script'),
             'deps': sorted(this.javascripts),
+            'config': {
+                'ws': {
+                    'endpoint': 'ws' + (yield from this.root['ws']).url[4:],
+                },
+                'debug': {
+                    'on': False,
+                }
+            },
         },
     )}</script>
     <script src="${static_url('script/require.conf.js')}"

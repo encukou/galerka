@@ -4,6 +4,7 @@ import textwrap
 import json
 import datetime
 import time
+import traceback
 
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest
@@ -20,7 +21,8 @@ class CollisionError(Exception):
 
 
 class ShoutboxMessage:
-    def __init__(self, time, author, body):
+    def __init__(self, stamp, time, author, body):
+        self.stamp = stamp
         self.time = time
         self.author = author
         self.body = body
@@ -28,6 +30,7 @@ class ShoutboxMessage:
     @classmethod
     def from_dict(cls, dict):
         return cls(
+            stamp=dict['timestamp'],
             time=datetime.datetime.utcfromtimestamp(dict['timestamp']),
             author=dict['author-name'],
             body=dict['body'],
@@ -52,20 +55,31 @@ class ShoutboxPage(GalerkaView):
     def rendered_sidebar_posts(self):
         return self._render_posts(3, 5, 'compact')
 
-    def _render_posts(self, header_level, number=5, date_format='compact'):
+    def _render_post(self, post, header_level, date_format='compact'):
+        message = ShoutboxMessage.from_dict(post)
         template = self.get_template('widgets/shoutbox_post.mako')
+        post_html = yield from template.render_async(
+            message=message,
+            date_format=date_format,
+            header_level=header_level,
+        )
+        return post_html
+
+    def _render_posts(self, header_level, number=5, date_format='compact'):
         redis = yield from self.request.redis
         prefix = self.request.redis_prefix
         result = []
+        result.append(Markup('<div data-ws-channel="shoutbox">'))
         posts = yield from redis.zrange(prefix + 'shoutbox', -number, -1)
-        for post in reversed(list(posts)):
-            (post, score) = yield from post
-            message = ShoutboxMessage.from_dict(json.loads(post))
-            result.append((yield from template.render_async(
-                message=message,
+        for post_entry in reversed(list(posts)):
+            post, score = yield from post_entry
+            rendered = yield from self._render_post(
+                json.loads(post),
                 date_format=date_format,
-                header_level=header_level,
-            )))
+                header_level=header_level
+            )
+            result.append(rendered)
+        result.append(Markup('</div>'))
         return Markup(''.join(result))
 
     @asyncio.coroutine
@@ -97,6 +111,7 @@ class ShoutboxPage(GalerkaView):
                     if ld:
                         raise CollisionError
                     yield from t.zadd(prefix + 'shoutbox', {data: timestamp})
+                    yield from t.publish(prefix + 'shoutbox', data)
                     yield from t.exec()
                 except (asyncio_redis.TransactionError, CollisionError) as e:
                     print('Blocked!', repr(body), type(e))
@@ -114,3 +129,27 @@ class ShoutboxPage(GalerkaView):
             })
             status = '400 Bad Request'
         return status, data, self.request.args.get('redirect', self.root.url)
+
+    @asyncio.coroutine
+    def ws_subscribe(self, send, last_stamp=None):
+        try:
+            send(action='start')
+            prefix = self.request.redis_prefix
+            connection = yield from self.request.redis_single_connection()
+            try:
+                subscriber = yield from connection.start_subscribe()
+                yield from subscriber.subscribe([prefix + 'shoutbox'])
+                while True:
+                    reply = yield from subscriber.next_published()
+                    print('Received: ', repr(reply.value),
+                          'on channel', reply.channel)
+                    data = json.loads(reply.value)
+                    rendered = yield from self._render_post(data, 3)
+                    send(content=rendered)
+            finally:
+                connection.close()
+        except Exception as e:
+            traceback.print_exc()
+            raise
+        finally:
+            send(action='end')
