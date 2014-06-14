@@ -31,7 +31,7 @@ class ShoutboxMessage:
     def from_dict(cls, dict):
         return cls(
             stamp=dict['timestamp'],
-            time=datetime.datetime.utcfromtimestamp(dict['timestamp']),
+            time=datetime.datetime.utcfromtimestamp(float(dict['timestamp'])),
             author=dict['author-name'],
             body=dict['body'],
         )
@@ -96,20 +96,19 @@ class ShoutboxPage(GalerkaView):
                 try:
                     timestamp = time.time()
                     data = json.dumps({
-                        'timestamp': timestamp,
+                        'timestamp': str(timestamp),
                         'author': None,
                         'author-name': self.request.environ['REMOTE_ADDR'],
                         'body': body,
                     })
                     t = yield from redis.multi(watch=[self.redis_key])
-                    dupe = yield from redis.zrangebyscore(
+                    num_dupes = yield from redis.zcount(
                         self.redis_key,
                         asyncio_redis.ZScoreBoundary(timestamp,
                                                      exclude_boundary=False),
                         asyncio_redis.ZScoreBoundary('+inf'),
                     )
-                    ld = list(dupe)
-                    if ld:
+                    if num_dupes:
                         raise CollisionError
                     yield from t.zadd(self.redis_key, {data: timestamp})
                     yield from t.publish(self.redis_key, data)
@@ -136,22 +135,46 @@ class ShoutboxPage(GalerkaView):
         @asyncio.coroutine
         def send_reply(jsonstr):
             data = json.loads(jsonstr)
-            print(options)
+
+            if data['timestamp'] in seen_stamps:
+                # eliminate duplicates
+                return
+            else:
+                # we are past duplicates
+                seen_stamps.clear()
+
             rendered = yield from self._render_post(
                 data,
                 header_level=options.get('header-level', 3),
                 date_format=options.get('date-format', 'compact'),
             )
-            print(rendered)
             send(content=rendered)
+            return data['timestamp']
 
+        seen_stamps = {last_stamp}
         if options is None:
             options = {}
         try:
             send(action='start')
+
+            redis = yield from self.request.redis
             connection = yield from self.request.redis_single_connection()
+            subscriber = yield from connection.start_subscribe()
+
+            if last_stamp:
+                last_stamp = float(last_stamp)
+                items = yield from redis.zrangebyscore(
+                    self.redis_key,
+                    asyncio_redis.ZScoreBoundary(last_stamp,
+                                                 exclude_boundary=True),
+                    asyncio_redis.ZScoreBoundary('+inf'),
+                )
+                for post_entry in items:
+                    post, score = yield from post_entry
+                    yield from send_reply(post)
+                    seen_stamps.add(score)
+
             try:
-                subscriber = yield from connection.start_subscribe()
                 yield from subscriber.subscribe([self.redis_key])
                 while True:
                     pubsubreply = yield from subscriber.next_published()
