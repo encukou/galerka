@@ -46,6 +46,10 @@ class View:
                 pathinfo.append(fragment)
         return self.traverse(pathinfo)
 
+    @cached_property
+    def redis_key(self):
+        return self.request.redis_prefix + self.path
+
     @asyncio.coroutine
     def get_child(self, url_fragment):
         raise LookupError(url_fragment)

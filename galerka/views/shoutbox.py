@@ -67,10 +67,12 @@ class ShoutboxPage(GalerkaView):
 
     def _render_posts(self, header_level, number=5, date_format='compact'):
         redis = yield from self.request.redis
-        prefix = self.request.redis_prefix
         result = []
-        result.append(Markup('<div data-ws-channel="shoutbox">'))
-        posts = yield from redis.zrange(prefix + 'shoutbox', -number, -1)
+        start_div = Markup(
+            '<div data-ws-channel="{}?header-level={}&amp;date-format={}">')
+        result.append(start_div.format(
+            self.path, header_level, date_format))
+        posts = yield from redis.zrange(self.redis_key, -number, -1)
         for post_entry in reversed(list(posts)):
             post, score = yield from post_entry
             rendered = yield from self._render_post(
@@ -90,7 +92,6 @@ class ShoutboxPage(GalerkaView):
             raise BadRequest('Post content required')
         if body.strip():
             redis = yield from self.request.redis
-            prefix = self.request.redis_prefix
             while True:
                 try:
                     timestamp = time.time()
@@ -100,9 +101,9 @@ class ShoutboxPage(GalerkaView):
                         'author-name': self.request.environ['REMOTE_ADDR'],
                         'body': body,
                     })
-                    t = yield from redis.multi(watch=[prefix + 'shoutbox'])
+                    t = yield from redis.multi(watch=[self.redis_key])
                     dupe = yield from redis.zrangebyscore(
-                        prefix + 'shoutbox',
+                        self.redis_key,
                         asyncio_redis.ZScoreBoundary(timestamp,
                                                      exclude_boundary=False),
                         asyncio_redis.ZScoreBoundary('+inf'),
@@ -110,8 +111,8 @@ class ShoutboxPage(GalerkaView):
                     ld = list(dupe)
                     if ld:
                         raise CollisionError
-                    yield from t.zadd(prefix + 'shoutbox', {data: timestamp})
-                    yield from t.publish(prefix + 'shoutbox', data)
+                    yield from t.zadd(self.redis_key, {data: timestamp})
+                    yield from t.publish(self.redis_key, data)
                     yield from t.exec()
                 except (asyncio_redis.TransactionError, CollisionError) as e:
                     print('Blocked!', repr(body), type(e))
@@ -131,21 +132,30 @@ class ShoutboxPage(GalerkaView):
         return status, data, self.request.args.get('redirect', self.root.url)
 
     @asyncio.coroutine
-    def ws_subscribe(self, send, last_stamp=None):
+    def ws_subscribe(self, send, last_stamp=None, options=None):
+        @asyncio.coroutine
+        def send_reply(jsonstr):
+            data = json.loads(jsonstr)
+            print(options)
+            rendered = yield from self._render_post(
+                data,
+                header_level=options.get('header-level', 3),
+                date_format=options.get('date-format', 'compact'),
+            )
+            print(rendered)
+            send(content=rendered)
+
+        if options is None:
+            options = {}
         try:
             send(action='start')
-            prefix = self.request.redis_prefix
             connection = yield from self.request.redis_single_connection()
             try:
                 subscriber = yield from connection.start_subscribe()
-                yield from subscriber.subscribe([prefix + 'shoutbox'])
+                yield from subscriber.subscribe([self.redis_key])
                 while True:
-                    reply = yield from subscriber.next_published()
-                    print('Received: ', repr(reply.value),
-                          'on channel', reply.channel)
-                    data = json.loads(reply.value)
-                    rendered = yield from self._render_post(data, 3)
-                    send(content=rendered)
+                    pubsubreply = yield from subscriber.next_published()
+                    yield from send_reply(pubsubreply.value)
             finally:
                 connection.close()
         except Exception as e:

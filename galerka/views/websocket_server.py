@@ -5,6 +5,7 @@ import aiohttp
 from aiohttp import websocket
 from aiohttp.errors import HttpBadRequest
 from werkzeug.exceptions import BadRequest
+from werkzeug.urls import url_parse
 
 from galerka.view import View
 from galerka.views.index import TitlePage
@@ -111,10 +112,12 @@ class WebsocketServer(View):
         if content_type != 'text/html':
             raise WebsocketBadRequest('unknown content type',
                                       **{'content-type': content_type})
-        channel = request.get('channel')
+        channel_url = request.get('channel')
         index = request.get('index')
-        if not channel:
+        if not channel_url:
             raise WebsocketBadRequest('no channel specified', index=index)
+        url = url_parse(channel_url)
+        channel = url.path
         try:
             view = yield from self.root[channel]
         except LookupError:
@@ -133,5 +136,6 @@ class WebsocketServer(View):
             data['channel'] = channel
             writer.send(json.dumps(data))
 
-        task = asyncio.Task(view.ws_subscribe(send, last_stamp))
+        task = asyncio.Task(view.ws_subscribe(send, last_stamp,
+                                              options=url.decode_query()))
         return index, task.cancel
