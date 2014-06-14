@@ -113,6 +113,7 @@ class ShoutboxPage(GalerkaView):
                     yield from t.zadd(self.redis_key, {data: timestamp})
                     yield from t.publish(self.redis_key, data)
                     yield from t.exec()
+                    self._start_trim_task(redis)
                 except (asyncio_redis.TransactionError, CollisionError) as e:
                     print('Blocked!', repr(body), type(e))
                     yield from asyncio.sleep(1)
@@ -129,6 +130,15 @@ class ShoutboxPage(GalerkaView):
             })
             status = '400 Bad Request'
         return status, data, self.request.args.get('redirect', self.root.url)
+
+    def _start_trim_task(self, redis):
+        """Starts a task to trim the chat history to a week"""
+        week = 3600 * 24 * 7
+        task = asyncio.Task(redis.zremrangebyscore(
+            self.redis_key,
+            asyncio_redis.ZScoreBoundary('-inf'),
+            asyncio_redis.ZScoreBoundary(time.time() - week),
+        ))
 
     @asyncio.coroutine
     def ws_subscribe(self, send, last_stamp=None, options=None):
