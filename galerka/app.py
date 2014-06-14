@@ -1,10 +1,7 @@
 import asyncio
-from inspect import isclass
 import traceback
 
-import pprintpp
 from werkzeug.wrappers import Request, Response
-from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.utils import redirect
 
@@ -26,8 +23,6 @@ class GalerkaRequest(Request, RedisMixin):
 @asyncio.coroutine
 def application(environ, start_response):
     if environ['galerka.debug']:
-        # pprintpp.pprint(environ)
-        # print('Handling request')
         print(environ['SERVER_PROTOCOL'],
               environ['REQUEST_METHOD'],
               environ['RAW_URI'])

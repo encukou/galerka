@@ -1,6 +1,6 @@
 import asyncio
 
-from asyncio_redis import Pool, Connection, TransactionError
+from asyncio_redis import Pool, Connection
 from werkzeug.urls import url_parse
 from werkzeug.utils import cached_property
 

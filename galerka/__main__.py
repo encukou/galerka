@@ -17,9 +17,6 @@ The Redis URL can be in the form:
         poolsize: Connections to allocate [default: 20]
 """
 
-import sys
-from asyncio import coroutine
-
 from werkzeug.serving import run_simple
 import docopt
 

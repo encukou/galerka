@@ -1,7 +1,6 @@
 import shutil
 import hashlib
 import json
-import pathlib
 import itertools
 
 import scss
@@ -110,7 +109,6 @@ def generate_static_dir(fromdir, todir, *, debug):
         relpath = item.path.relative_to(todir)
         srcpath = None
         if isinstance(item, StaticFile):
-            sha = item.sha
             if item.minified:
                 fmt = ('{i.sha} {srcpath} → {relpath}: '
                        '{i.source_size:,} → {i.size:,}b')
@@ -216,9 +214,6 @@ def _create_js_dir(fromdir, todir, debug, basepath):
                 source_size = len(js)
                 if '.min' not in source.suffixes and not debug:
                     js = jsmin.jsmin(js)
-                    minified = True
-                else:
-                    minified = False
                 sha = hashlib.sha1(js.encode('utf-8')).hexdigest()
                 destfile.write(js)
                 yield JSFile(

@@ -4,10 +4,7 @@ import os
 
 from mako.lookup import TemplateLookup
 from werkzeug.wsgi import SharedDataMiddleware
-from werkzeug.debug import DebuggedApplication
-import markupsafe
 
-from galerka.app import application
 from galerka.static import create_static_dir
 from galerka.util import make_tempdir
 from galerka.view import View
@@ -26,7 +23,6 @@ def list_subclasses(parent):
 def galerka_app_context(app, *, redis_url=None, debug=False):
     with make_tempdir(prefix='galerka-tmp.') as tempdir:
         root = pathlib.Path(__file__).parent
-        template_dir = root / 'templates'
         mako = TemplateLookup(
             directories=[str(root / 'templates')],
             module_directory=str(tempdir / 'mako_templates'),

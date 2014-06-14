@@ -1,12 +1,9 @@
 import asyncio
-import markdown
-import textwrap
 import json
 import datetime
 import time
 import traceback
 
-from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest
 from markupsafe import Markup
 import asyncio_redis
@@ -191,7 +188,7 @@ class ShoutboxPage(GalerkaView):
                     yield from send_reply(pubsubreply.value)
             finally:
                 connection.close()
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             raise
         finally:
