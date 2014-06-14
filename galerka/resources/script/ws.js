@@ -1,4 +1,4 @@
-define(['lib/mootools', 'module', 'debug'], function (mootools, module, debug) {
+define(['lib/mootools', 'module', 'debug', 'date-display'], function (mootools, module, debug, date_display) {
     "use strict";
     var sock,
         sock_open = false,
@@ -44,6 +44,7 @@ define(['lib/mootools', 'module', 'debug'], function (mootools, module, debug) {
             parent_element = subscribed_elements[data.index];
             temp_container = new Element('div');
             temp_container.set('html', data.content);
+            date_display.update(temp_container);
             temp_container.getChildren().each(function (new_element) {
                 new_element.addClass('ws-loaded');
                 new_element.inject(parent_element, 'top');

@@ -165,5 +165,6 @@ define(['lib/mootools'], function () {
     return {
         start: start,
         format: format,
+        update: update,
     };
 });

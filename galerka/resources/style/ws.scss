@@ -1,0 +1,14 @@
+h1, h2 {
+    .ws-loaded &.date-header time {
+        text-shadow: 0px 0px 4px white,
+                     0px 0px 6px $slightly_light_background;
+    }
+}
+
+footer {
+    .ws-loaded .date-header time {
+        text-shadow: 0px 0px 1px $light_background,
+                     0px 0px 3px white,
+                     0px 0px 5px $light_background;
+    }
+}
