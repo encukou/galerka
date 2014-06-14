@@ -46,8 +46,17 @@ define(['lib/mootools', 'module', 'debug', 'date-display'], function (mootools, 
             temp_container.set('html', data.content);
             date_display.update(temp_container);
             temp_container.getChildren().each(function (new_element) {
-                new_element.addClass('ws-loaded');
+                var height,
+                    fx = new Fx.Tween(new_element, {duration: 'short'});
                 new_element.inject(parent_element, 'top');
+                height = new_element.getSize().y;
+                new_element.addClass('ws-loaded');
+                new_element.setStyle('overflow', 'hidden');
+                fx.addEvent('complete', function () {
+                    new_element.setStyle('overflow', 'visible');
+                });
+                fx.set('max-height', '0px');
+                fx.start('max-height', '0px', height);
             });
         }
     }
