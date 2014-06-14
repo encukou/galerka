@@ -29,13 +29,15 @@ define(['lib/domReady', 'lib/mootools'], function (domready) {
         var el = document.id('shoutbox');
         function intercept_form_change(event, form) {
             var submit_button = form.getElement('button[type=submit]'),
-                submit_replacement = new Element('img', {
-                    src: form.getProperty('data-async-submit-img')
-                }),
+                submit_replacement,
                 request;
+            submit_replacement = new Element('img', {
+                src: form.getProperty('data-async-submit-img'),
+                'class': 'ajax-spinner'
+            });
             function undo() {
                 console.log('restore form');
-                submit_button.setStyle('display', 'inline');
+                submit_button.setStyle('visibility', 'visible');
                 submit_replacement.dispose();
             }
             function submit_http() {
@@ -48,7 +50,7 @@ define(['lib/domReady', 'lib/mootools'], function (domready) {
             try {
                 event.preventDefault();
                 submit_replacement.inject(submit_button, 'after');
-                submit_button.setStyle('display', 'none');
+                submit_button.setStyle('visibility', 'hidden');
                 request = new Request.JSON({
                     url: form.getProperty('action'),
                     method: 'POST',

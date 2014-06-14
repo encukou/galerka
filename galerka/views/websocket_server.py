@@ -103,7 +103,7 @@ class WebsocketServer(View):
             _close(code=1011)
             # 1011: Internal Server Error (RFC 6455 11.7)
         finally:
-            for func in unsubscribe_functions:
+            for func in unsubscribe_functions.values():
                 func()
 
     @asyncio.coroutine

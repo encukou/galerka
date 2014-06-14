@@ -188,6 +188,8 @@ class ShoutboxPage(GalerkaView):
                     yield from send_reply(pubsubreply.value)
             finally:
                 connection.close()
+        except asyncio.CancelledError:
+            pass
         except Exception:
             traceback.print_exc()
             raise

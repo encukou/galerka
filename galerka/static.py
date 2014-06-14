@@ -2,6 +2,7 @@ import shutil
 import hashlib
 import json
 import itertools
+from xml.etree import ElementTree
 
 import scss
 import jsmin
@@ -99,6 +100,7 @@ def generate_static_dir(fromdir, todir, *, debug):
         mkdir(todir),
         copy_dir(fromdir / 'background', todir / 'background'),
         copy_dir(fromdir / 'img', todir / 'img'),
+        create_loading_icons(fromdir / 'loading', todir / 'loading'),
         create_css(fromdir, todir, debug=debug),
         create_js(fromdir, todir, debug=debug),
         copy_file(fromdir / 'favicon.png', todir / 'favicon.png'),
@@ -135,7 +137,10 @@ def copy_dir(fromdir, todir):
     yield from mkdir(todir)
     for path in fromdir.iterdir():
         dest_path = transplant_path(path, fromdir, todir)
-        yield from copy_file(path, dest_path)
+        if path.is_dir():
+            yield from copy_dir(path, dest_path)
+        else:
+            yield from copy_file(path, dest_path)
 
 
 def create_css(fromdir, todir, *, debug):
@@ -152,11 +157,12 @@ def create_css(fromdir, todir, *, debug):
             'style': scss_style,
         },
     )
-    dest_filename = todir / 'style.css'
-    with (dest_filename).open('w') as cssfile:
-        source_file = css_source_path / 'root.scss'
-        cssfile.write(scss_compiler.compile(scss_file=str(source_file)))
-    yield StaticFile(dest_filename)
+    for name in 'style', 'loading':
+        dest_filename = todir / (name + '.css')
+        with (dest_filename).open('w') as cssfile:
+            source_file = css_source_path / (name + '.scss')
+            cssfile.write(scss_compiler.compile(scss_file=str(source_file)))
+        yield StaticFile(dest_filename)
 
 
 def create_js(fromdir, todir, *, debug):
@@ -224,3 +230,21 @@ def _create_js_dir(fromdir, todir, debug, basepath):
                     source_size=source_size,
                     module_name=mod_name,
                 )
+
+
+def create_loading_icons(fromdir, todir):
+    yield from mkdir(todir)
+    for path in fromdir.glob('*.svg'):
+        outpath = transplant_path(path, fromdir, todir)
+        with path.open() as infile, outpath.open('wb') as outfile:
+            outfile.write(
+                b'<?xml-stylesheet type="text/css" href="../loading.css"?>\n')
+
+            ElementTree.register_namespace('', 'http://www.w3.org/2000/svg')
+            tree = ElementTree.parse(infile)
+            root = tree.getroot()
+            del root.attrib['fill']
+            tree.write(outfile, method='html')
+            ElementTree.register_namespace('', '')
+
+            yield StaticFile(outpath)

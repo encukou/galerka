@@ -30,7 +30,7 @@
     <script src="${static_url('script/require.conf.js')}"
             async="async"></script>
 </head>
-<body class="galerka no-js">
+<body class="galerka">
     <header>
         <div id="site-title" title="Galerie">
             <a href="/">&nbsp;</a>

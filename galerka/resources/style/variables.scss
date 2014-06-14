@@ -17,11 +17,4 @@ $relayout_duration: 0.5s;
 $sans: 'Ubuntu', sans-serif;
 $serif: 'Gentium Book Basic', serif;
 
-@import reset.css;
-@import generic.scss;
-@import layout.scss;
-@import content.scss;
-@import chrome.scss;
-@import forms.scss;
-@import shoutbox.scss;
-@import ws.scss;
+*{}

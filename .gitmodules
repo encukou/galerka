@@ -1,0 +1,3 @@
+[submodule "galerka/resources/loading"]
+	path = galerka/resources/loading
+	url = https://github.com/jxnblk/loading.git
