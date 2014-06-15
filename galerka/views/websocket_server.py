@@ -34,8 +34,7 @@ class WebsocketServer(View):
         def response(environ, start_response):
             reader = self.request.environ['async.reader']
             writer = self.request.environ['async.writer']
-            req_headers = [(k.upper(), v)
-                           for k, v in self.request.headers.items()]
+            req_headers = self.request.headers
             try:
                 shake_result = websocket.do_handshake('GET',
                                                       req_headers, writer)
