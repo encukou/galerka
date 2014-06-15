@@ -210,7 +210,7 @@ class GalerkaView(View):
             static_url=self.static_url,
             redis=self.request.redis,
         )
-        return result
+        return Markup(result)
 
     @cached_property
     def javascripts(self):

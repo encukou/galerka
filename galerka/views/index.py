@@ -11,9 +11,5 @@ class TitlePage(GalerkaView):
         return self.request.environ['galerka.site-title']
 
     @asyncached
-    def rendered_page(self):
-        return (yield from self.render_template('base.mako'))
-
-    @asyncached
     def rendered_contents(self):
-        return 'Hello World'
+        return 'Hello World'  # TODO

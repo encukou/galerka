@@ -54,10 +54,7 @@
     <hr>
     <footer>
         <section id="usernav">
-            <details open id="login">
-                <h2>Login</h2>
-                <!-- TODO login -->
-            </details>
+            <%include file="widgets/login.mako" />
             <!-- TODO mgmt -->
             <%include file="widgets/shoutbox.mako" />
         </section>

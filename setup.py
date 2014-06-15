@@ -13,6 +13,7 @@ requires = [
     'asyncio-redis',
     'pytz',
     'jsmin',
+    'wtforms',
 ]
 
 if sys.version_info[:3] < (3, 3):
