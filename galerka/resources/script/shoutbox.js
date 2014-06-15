@@ -30,7 +30,12 @@ define(['lib/domReady', 'lib/mootools'], function (domready) {
         function intercept_form_change(event, form) {
             var submit_button = form.getElement('button[type=submit]'),
                 submit_replacement,
-                request;
+                request,
+                data = form_to_object(form);
+            if (/^\s*$/.test(data.content)) {
+                event.preventDefault();
+                return true;
+            }
             submit_replacement = new Element('img', {
                 src: form.getProperty('data-async-submit-img'),
                 'class': 'ajax-spinner'
@@ -39,6 +44,10 @@ define(['lib/domReady', 'lib/mootools'], function (domready) {
                 console.log('restore form');
                 submit_button.setStyle('visibility', 'visible');
                 submit_replacement.dispose();
+            }
+            function success_cleanup() {
+                form.reset();
+                undo();
             }
             function submit_http() {
                 console.log('submit normally');
@@ -60,7 +69,7 @@ define(['lib/domReady', 'lib/mootools'], function (domready) {
                 });
                 request.addEvents({
                     cancel: submit_http,
-                    success: undo,
+                    success: success_cleanup,
                     failure: submit_http,
                 });
                 request.send();
