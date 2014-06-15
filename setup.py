@@ -14,6 +14,8 @@ requires = [
     'pytz',
     'jsmin',
     'wtforms',
+    'aiopg',
+    'sqlalchemy',
 ]
 
 if sys.version_info[:3] < (3, 3):

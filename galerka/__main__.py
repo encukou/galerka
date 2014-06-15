@@ -9,6 +9,8 @@ Options:
   -p, --port=NUM            Port to listen on [default: 4000]
   -d, --debug               Enable debugging
   --redis-url=URL           Redis URL [default: redis://localhost:6379/#galerka]
+  --postgres-dsn=DSN        Postgres DSN [default: dbname=galerka user=galerka]
+  --postgres-prefix=PREFIX  Postgres table name prefix [default: galerka_]
 
 The Redis URL can be in the form:
     redis://[db-number[:password]@]host:port[?option=value][#prefix]
@@ -32,6 +34,8 @@ def main(options):
     context = galerka_app_context(
         application,
         redis_url=options['--redis-url'],
+        postgres_dsn=options['--postgres-dsn'],
+        postgres_prefix=options['--postgres-prefix'],
         debug=debug,
     )
 

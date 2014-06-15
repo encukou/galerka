@@ -6,6 +6,7 @@ from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.utils import redirect
 
 from galerka.redis import RedisMixin
+from galerka.postgres import PostgresMixin
 
 
 @asyncio.coroutine
@@ -16,7 +17,7 @@ def error_404(request):
                     status=404)
 
 
-class GalerkaRequest(Request, RedisMixin):
+class GalerkaRequest(Request, RedisMixin, PostgresMixin):
     pass
 
 

@@ -161,28 +161,29 @@ class GalerkaView(View):
         except AttributeError:
             return None
         else:
-            @asyncio.coroutine
-            def post():
-                status, data, url = yield from do_post()
-                if self.request.headers['accept'] == 'application/json':
-                    return Response(data,
-                                    status=status,
-                                    headers={'Content-Type':
-                                             'application/json'})
-                else:
-                    content = Markup('''
-                        <head>
-                            <title>OK</title>
-                        </head>
-                        <body>
-                            <h1>OK</h1>
-                            <p>→ <a href="{}">{}</a></p>
-                            <p>({})</p>
-                        </body>
-                    ''').format(Markup(url), url, status)
-                    return Response(content, 303, mimetype='text/html',
-                                    headers={'Location': url})
-            return post()
+            return self.handle_post()
+
+    @asyncio.coroutine
+    def handle_post(self):
+        status, data, url = yield from self.do_post()
+        if self.request.headers['accept'] == 'application/json':
+            return Response(data,
+                            status=status,
+                            headers={'Content-Type':
+                                     'application/json'})
+        else:
+            content = Markup('''
+                <head>
+                    <title>OK</title>
+                </head>
+                <body>
+                    <h1>OK</h1>
+                    <p>→ <a href="{}">{}</a></p>
+                    <p>({})</p>
+                </body>
+            ''').format(Markup(url), url, status)
+            return Response(content, 303, mimetype='text/html',
+                            headers={'Location': url})
 
     @asyncached
     def rendered_page(self):

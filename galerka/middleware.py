@@ -9,6 +9,8 @@ from galerka.static import create_static_dir
 from galerka.util import make_tempdir
 from galerka.view import View
 from galerka.redis import get_redis_args
+from galerka.postgres import postgres_middleware, postgres_pool_factory
+from galerka.tables import tables_factory
 
 from galerka.views.index import TitlePage
 
@@ -20,7 +22,10 @@ def list_subclasses(parent):
 
 
 @contextlib.contextmanager
-def galerka_app_context(app, *, redis_url=None, debug=False):
+def galerka_app_context(app, *,
+                        redis_url=None,
+                        postgres_dsn=None, postgres_prefix=None,
+                        debug=False):
     with make_tempdir(prefix='galerka-tmp.') as tempdir:
         root = pathlib.Path(__file__).parent
         mako = TemplateLookup(
@@ -52,6 +57,9 @@ def galerka_app_context(app, *, redis_url=None, debug=False):
         for cls in list_subclasses(View):
             print('    %s:%s' % (cls.__module__, cls.__qualname__))
 
+        tables = tables_factory(postgres_prefix)
+        get_pool = postgres_pool_factory(postgres_dsn, tables)
+
         environ_values = {
             'galerka.debug': debug,
             'galerka.tempdir': tempdir,
@@ -60,7 +68,11 @@ def galerka_app_context(app, *, redis_url=None, debug=False):
             'galerka.root_class': TitlePage,
             'galerka.redis-args': get_redis_args(redis_url),
             'galerka.static_files': static_files,
+            'galerka.postgres.get_pool': get_pool,
+            'galerka.postgres.tables': tables,
         }
+
+        app = postgres_middleware(app)
 
         def application(environ, start_response):
             environ.update(environ_values)

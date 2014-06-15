@@ -1,3 +1,6 @@
+import asyncio
+import json
+
 import wtforms
 from wtforms import validators
 from werkzeug.wrappers import Response
@@ -19,7 +22,7 @@ class RegistrationForm(forms.Form):
     password = wtforms.PasswordField(
         'Heslo',
         [
-            validators.Length(min=8,
+            validators.Length(min=5,
                               message='Heslo by mělo mít alespoň 5 znaků'),
             validators.DataRequired(message='Heslo je povinné'),
             validators.EqualTo('password2',
@@ -46,17 +49,6 @@ class NewUserView(UsersView):
     def title(self):
         return 'Nový účet'
 
-    @property
-    def POST(self):
-        self.form = form = RegistrationForm(self.request.form,
-                                            prefix='newuser:')
-        self.form_valid = form.validate()
-        if self.form_valid:
-            return super().POST
-        else:
-            rendered = yield from self.rendered_page
-            return Response(rendered, mimetype='text/html')
-
     @asyncached
     def rendered_contents(self):
         if self.request.environ['REQUEST_METHOD'].upper() == 'POST':
@@ -64,3 +56,24 @@ class NewUserView(UsersView):
         else:
             self.form = form = RegistrationForm(prefix='newuser:')
         return (yield from self.render_template('user_new.mako'))
+
+    @property
+    def POST(self):
+        self.form = form = RegistrationForm(self.request.form,
+                                            prefix='newuser:')
+        self.form_valid = form.validate()
+        if self.form_valid:
+            return self.handle_post()
+        else:
+            def ret():
+                rendered = yield from self.rendered_page
+                return Response(rendered, mimetype='text/html')
+            return ret()
+
+    @asyncio.coroutine
+    def do_post(self):
+        print(self.form_valid, self.form.data)
+        # TODO
+        ret = yield from self.request.execute_sql('SELECT 1')
+        assert ret == (1, ), ret
+        return '201 Created', json.dumps({'created': 'ok'}), self.url
