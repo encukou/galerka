@@ -1,5 +1,6 @@
 import wtforms
 from wtforms import validators
+from werkzeug.wrappers import Response
 
 from galerka.view import GalerkaView
 from galerka.views.index import TitlePage
@@ -22,12 +23,11 @@ class RegistrationForm(forms.Form):
             validators.Length(min=8,
                               message='Heslo by mělo mít minimálně 5 znaků'),
             validators.DataRequired(message='Heslo je povinné'),
+            validators.EqualTo('password2',
+                               message='Heslo a kontrola se musí shodovat'),
         ],
     )
-    password2 = wtforms.PasswordField(
-        'Heslo znovu',
-        [validators.DataRequired(message='Kontrola hesla je povinná')],
-    )
+    password2 = wtforms.PasswordField('Heslo znovu')
 
 
 @TitlePage.child('users')
@@ -47,8 +47,21 @@ class NewUserView(UsersView):
     def title(self):
         return 'Nový účet'
 
+    @property
+    def POST(self):
+        self.form = form = RegistrationForm(self.request.form,
+                                            prefix='newuser:')
+        self.form_valid = form.validate()
+        if self.form_valid:
+            return super().POST
+        else:
+            rendered = yield from self.rendered_page
+            return Response(rendered, mimetype='text/html')
+
     @asyncached
     def rendered_contents(self):
-        self.form = form = RegistrationForm(prefix='newuser:')
-        print(list(form))
+        if self.request.environ['REQUEST_METHOD'].upper() == 'POST':
+            assert self.form
+        else:
+            self.form = form = RegistrationForm(prefix='newuser:')
         return (yield from self.render_template('user_new.mako'))
