@@ -47,8 +47,3 @@ class RedisMixin:
     @cached_property
     def redis_prefix(self):
         return self.environ['galerka.redis-args'][2]
-
-    @asyncio.coroutine
-    def redis_single_connection(self):
-        args, poolsize, prefix = self.environ['galerka.redis-args']
-        return (yield from Connection.create(**args))

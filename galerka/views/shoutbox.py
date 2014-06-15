@@ -165,8 +165,7 @@ class ShoutboxPage(GalerkaView):
             send(action='start')
 
             redis = yield from self.request.redis
-            connection = yield from self.request.redis_single_connection()
-            subscriber = yield from connection.start_subscribe()
+            subscriber = yield from redis.start_subscribe()
 
             if last_stamp:
                 last_stamp = float(last_stamp)
