@@ -2,8 +2,10 @@ import asyncio
 
 from werkzeug.utils import call_maybe_yield, cached_property
 import aiopg
-from aiopg.sa import create_engine
+from aiopg.sa import create_engine, dialect
 import psycopg2
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.sql import ClauseElement
 
 from galerka.util import asyncached
 
@@ -30,52 +32,70 @@ class SQLConnection:
     def __init__(self, get_pool):
         self.get_pool = get_pool
         self.connection = None
+        self.transaction = None
 
     @asyncached
     def pool(self):
         return (yield from self.get_pool())
 
     @asyncio.coroutine
-    def execute(self, *args, **kwargs):
+    def execute(self, query, *multiparams, **params):
         if not self.connection:
             pool = yield from self.pool
             self.connection = yield from pool.acquire()
-            yield from self._execute('BEGIN')
-        result = yield from self._execute(*args, **kwargs)
+            self.transaction = yield from self.connection.begin()
+        if isinstance(query, ClauseElement):
+            print(query.compile(dialect=dialect))
+        else:
+            print(repr(query), multiparams, params)
+        result = yield from self.connection.execute(query,
+                                                    *multiparams,
+                                                    **params)
         return result
 
     @asyncio.coroutine
-    def _execute(self, *args, **kwargs):
-        cursor = yield from self.connection.cursor()
-        try:
-            yield from cursor.execute(*args, **kwargs)
-            if cursor.description is not None:
-                return (yield from cursor.fetchall())
-        finally:
-            cursor.close()
-
-    @asyncio.coroutine
     def commit(self):
-        if self.connection:
-            yield from self.execute('COMMIT')
+        if self.transaction:
+            yield from self.transaction.commit()
 
     @asyncio.coroutine
     def rollback(self):
-        if self.connection:
-            yield from self.execute('ROLLBACK')
+        if self.transaction:
+            yield from self.transaction.rollback()
 
     @asyncio.coroutine
     def close(self):
         if self.connection:
-            (yield from self.pool).release(self.connection)
+            yield from self.connection.close()
 
 
-def postgres_pool_factory(dsn, create_tables=None):
-    pool = asyncio.Task(aiopg.create_pool(dsn))
+def postgres_pool_factory(dsn, tables):
+    @asyncio.coroutine
+    def get_pool():
+        pool = yield from create_engine(dsn)
+
+        connection = yield from pool.acquire()
+        try:
+            result = yield from connection.execute(
+                'SELECT tablename FROM pg_tables '
+                'WHERE schemaname=%s', ('public', ))
+            existing_table_names = {name[0] for name in result}
+            print('Existing tables:', existing_table_names)
+
+            for name, table in tables.metadata.tables.items():
+                if name not in existing_table_names:
+                    create_statement = CreateTable(table)
+                    print(create_statement.compile(dialect=dialect))
+                    yield from connection.execute(create_statement)
+        finally:
+            connection.close()
+
+        return pool
+    pool_future = asyncio.Task(get_pool())
 
     @asyncio.coroutine
     def get_pool():
-        return (yield from pool)
+        return (yield from pool_future)
 
     return get_pool
 

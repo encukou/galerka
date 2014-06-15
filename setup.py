@@ -14,7 +14,7 @@ requires = [
     'pytz',
     'jsmin',
     'wtforms',
-    'aiopg',
+    'aiopg > 0.2.3',
     'sqlalchemy',
 ]
 
