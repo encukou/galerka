@@ -13,15 +13,14 @@ class RegistrationForm(forms.Form):
         'Přezdívka',
         [
             validators.Length(min=2, max=30,
-                              message='Jméno musí mít 2 až 30 znaků'),
-            validators.DataRequired(message='Jméno je povinné'),
+                              message='Přezdívka musí mít 2 až 20 znaků'),
         ],
     )
     password = wtforms.PasswordField(
         'Heslo',
         [
             validators.Length(min=8,
-                              message='Heslo by mělo mít minimálně 5 znaků'),
+                              message='Heslo by mělo mít alespoň 5 znaků'),
             validators.DataRequired(message='Heslo je povinné'),
             validators.EqualTo('password2',
                                message='Heslo a kontrola se musí shodovat'),

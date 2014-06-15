@@ -129,4 +129,140 @@ form {
             margin-bottom: 0;
         }
     }
+
+    #content & {
+        margin-top: 1em;
+        margin-bottom: 1em;
+
+        input[type=submit], input[type=button], textarea, select,
+        input[type=file], input[type=password], input[type=text],
+        input[type=search], input[type=date], button[type=submit], button {
+            background-color: $slightly_light_background;
+        }
+
+        fieldset {
+            width: 100%;
+
+            button {
+                font-size: 100%;
+                font-family: $sans;
+                color: $dark_foreground;
+                background-color: $mid_background;
+                padding: 0.25ex 1em;
+                margin: 0;
+            }
+
+            ul {
+                list-style: none;
+            }
+
+            &>ul {
+                margin-left: 0;
+
+                &>li {
+                    padding: 0.5ex;
+                    clear: left;
+                }
+
+                input[type=password], input[type=text], input[type=search],
+                input[type=date], textarea {
+                    text-align: left;
+                    padding-left: 0.5em;
+                    padding-right: 0.5em;
+                    background-color: $slightly_light_background;
+                }
+
+                input[type=radio] {
+                    background-color: $slightly_light_background;
+                }
+
+                .errors li {
+                    font-family: $sans;
+                    font-size: 90%;
+
+                    &:before {
+                        content: '⚠';
+                        display: inline-block;
+                        width: 1.5em;
+                        font-size: 90%;
+                        color: red;
+                    }
+                }
+
+                ul {
+                    li {
+                        * {
+                            display: inline;
+                        }
+                    }
+                }
+            }
+
+            &+* {
+                clear: both;
+            }
+        }
+
+        @media (min-width: 53em) {
+            fieldset {
+                &>ul>li, &.buttons {
+                    position: relative;
+                    clear: both;
+
+                    &>label {
+                        clear: both;
+                        float: left;
+                        width: 39%;
+                        text-align: right;
+                        margin-top: 0;
+                        margin-bottom: 1ex;
+                        margin-left: 0;
+                        margin-right: 0;
+                        padding: 0 1ex 0 0;
+                    }
+
+                    &>* {
+                        display: block;
+                        margin-left: 39%;
+                        width: 22%;
+                        box-sizing: border-box;
+                        position: relative;
+                        z-index: 2;
+                    }
+
+                    input[type=password], input[type=text],
+                    input[type=search], button[type=submit] {
+                        min-width: 10rem;
+                    }
+
+                    textarea, .long-text {
+                        width: 61%;
+                        max-width: 30em;
+                    }
+
+                    .errors {
+                        width: 61%;
+                    }
+                }
+            }
+        }
+
+        @media (max-width: 53em) {
+            fieldset {
+                &>ul>li, &.buttons {
+                    text-align: center;
+
+                    &>label {
+                        margin-bottom: 0.5ex;
+                        display: block;
+                    }
+
+                    .errors {
+                        margin-left: auto;
+                        margin-right: auto;
+                    }
+                }
+            }
+        }
+    }
 }

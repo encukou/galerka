@@ -3,7 +3,7 @@
     <ul>
         % for field in this.form:
         <li>
-            ${field.label}:
+            ${field.label}
             ${field(class_='widget-' + type(field.widget).__name__)}
             <ul class="errors">
                 % for error in field.errors:
@@ -15,6 +15,6 @@
     </ul>
     </fieldset>
     <fieldset class="buttons">
-        <button id="submit">Založit účet</button>
+        <button id="submit" type="submit">Založit účet</button>
     </fieldset>
 </form>
